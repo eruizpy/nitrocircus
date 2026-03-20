@@ -35,7 +35,6 @@ export async function runAgent(task: AgentTask): Promise<void> {
     emitMiniverse('agent.thinking', task.agentType, task.projectName, task.title)
     for await (const message of query({
       prompt,
-      abortController: new AbortController(),
       options: {
         cwd: REPO_PATH,
         maxTurns: config.maxTurns,
@@ -50,7 +49,7 @@ export async function runAgent(task: AgentTask): Promise<void> {
       }
       if (message.type === 'result') {
         success = !message.is_error
-        if (message.is_error) lastError = String(message.result)
+        if (message.is_error) lastError = message.subtype ?? 'unknown error'
       }
     }
 
