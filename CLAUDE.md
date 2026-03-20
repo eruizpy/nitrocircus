@@ -97,6 +97,11 @@ npm run agents                # start agent-runner (workers/agent-runner)
 - MongoDB: localhost:27017
 - Redis: localhost:6379
 
+**Production (Linode VPS `172.233.163.22`):**
+- Deploy: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+- API health: `curl http://172.233.163.22:3000/health`
+- CI/CD: push to `main` → GitHub Actions → auto-deploy
+
 **Hot reload**: source files in `apps/*/src/` and `packages/shared/src/` are volume-mounted; `tsx watch` picks up changes automatically without rebuilding the image.
 
 **Agent worker**: runs outside Docker on the host. Requires `claude` CLI authenticated (`claude --version` to verify). Consumes Redis queues and uses Claude Code SDK to write code.
