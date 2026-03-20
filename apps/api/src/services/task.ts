@@ -80,10 +80,24 @@ export async function transitionTask(
   })
 
   if (doc.githubIssueNumber && GITHUB_SYNC_STATES.has(to)) {
-    syncTaskIssueState(doc.githubIssueNumber, to).catch(() => {})
+    syncTaskIssueState(doc.githubIssueNumber, to, doc.githubProjectItemId).catch(() => {})
   }
 
   return toTask({ ...doc, state: to, updatedAt })
+}
+
+export async function setTaskGitHubBranch(id: string, branchName: string): Promise<void> {
+  await collections.tasks().updateOne(
+    { _id: toObjectId(id) },
+    { $set: { githubBranch: branchName, updatedAt: new Date() } },
+  )
+}
+
+export async function setTaskGitHubProjectItem(id: string, projectItemId: string): Promise<void> {
+  await collections.tasks().updateOne(
+    { _id: toObjectId(id) },
+    { $set: { githubProjectItemId: projectItemId, updatedAt: new Date() } },
+  )
 }
 
 export async function setTaskGitHubIssue(id: string, issueNumber: number): Promise<void> {

@@ -1,7 +1,7 @@
 import Groq from 'groq-sdk'
 import type { Project, AgentType, Priority } from '@nitrocircus/shared'
 import { createEpic } from './epic'
-import { createTask, transitionTask, listTasksByProject, setTaskGitHubIssue } from './task'
+import { createTask, transitionTask, listTasksByProject, setTaskGitHubIssue, setTaskGitHubProjectItem } from './task'
 import { logEvent } from './event-log'
 import { ensureProjectLabels, createTaskIssue } from './github'
 
@@ -157,8 +157,10 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
         projectName: project.name,
         epicTitle: epicData.title,
       })
-        .then((issueNumber) => {
-          if (issueNumber) return setTaskGitHubIssue(task.id, issueNumber)
+        .then(async (result) => {
+          if (!result) return
+          await setTaskGitHubIssue(task.id, result.issueNumber)
+          if (result.projectItemId) await setTaskGitHubProjectItem(task.id, result.projectItemId)
         })
         .catch(() => {})
 

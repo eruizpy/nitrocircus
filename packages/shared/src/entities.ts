@@ -64,6 +64,8 @@ export interface Task {
   priority: Priority
   /** GitHub issue number once synced */
   githubIssueNumber?: number
+  /** GitHub Projects v2 item node ID */
+  githubProjectItemId?: string
   /** Feature branch created for this task */
   githubBranch?: string
   createdAt: Date

@@ -2,6 +2,8 @@ import type { FastifyInstance } from 'fastify'
 import { createProject, getProject, transitionProject } from '../services/project'
 import { startProjectTasks, listTasksByProject, transitionTask } from '../services/task'
 import { planProject } from '../services/pm-agent'
+import { runAgent } from '../services/agent-runner'
+import { getEpic } from '../services/epic'
 
 interface CommandBody {
   type: string
@@ -60,13 +62,23 @@ async function dispatch(
     }
 
     // ── /start <project> ──────────────────────────────────────
-    // Authorizes development: activates all awaiting_start_approval tasks.
+    // Authorizes development: activates all awaiting_start_approval tasks,
+    // then dispatches each to its assigned execution agent (fire-and-forget).
     case 'project.start': {
       const { projectId } = payload as { projectId: string }
       const project = await getProject(projectId)
       if (!project) throw new Error(`Project not found: ${projectId}`)
       const startedTasks = await startProjectTasks(projectId, actorId)
       const updatedProject = await transitionProject(projectId, 'active', 'telegram', actorId)
+
+      // Dispatch each task to its agent asynchronously
+      for (const task of startedTasks) {
+        const epicTitle = task.epicId
+          ? await getEpic(task.epicId).then((e) => e?.title ?? 'Sin épica')
+          : 'Sin épica'
+        runAgent(task, project, epicTitle).catch(() => {})
+      }
+
       return { project: updatedProject, startedTasks }
     }
 

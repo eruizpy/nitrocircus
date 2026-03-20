@@ -20,6 +20,12 @@ export async function createEpic(data: {
   return toEpic(doc)
 }
 
+export async function getEpic(id: string): Promise<Epic | null> {
+  if (!ObjectId.isValid(id)) return null
+  const doc = await collections.epics().findOne({ _id: new ObjectId(id) })
+  return doc ? toEpic(doc) : null
+}
+
 export async function listEpicsByProject(projectId: string): Promise<Epic[]> {
   const docs = await collections.epics().find({ projectId }).sort({ createdAt: 1 }).toArray()
   return docs.map(toEpic)
