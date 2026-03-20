@@ -11,6 +11,12 @@ interface PlanResult {
 }
 import { sendCommand, findProject, getProjectTasks } from './orchestrator'
 import { formatProject, formatBoard, formatTaskList, esc } from './format'
+import {
+  startDeployConversation,
+  isInConversation,
+  handleConversationInput,
+  cancelConversation,
+} from './deploy-conversation'
 
 type Ctx = Context
 
@@ -216,13 +222,29 @@ export async function cmdDeliver(ctx: Ctx): Promise<void> {
   const project = await resolveProject(ctx, arg)
   if (!project) return
 
-  const res = await sendCommand('project.deliver', { projectId: project.id }, actorId(ctx))
+  const res = await sendCommand<{ project: Project; deliveryDir: string }>(
+    'project.deliver',
+    { projectId: project.id },
+    actorId(ctx),
+  )
   if (!res.ok) {
     await ctx.reply(`Error: ${res.error}`)
     return
   }
 
-  await ctx.reply(`📦 Proyecto <b>${esc(project.name)}</b> marcado como entregado.`, HTML)
+  const deliveryPath = res.data?.deliveryDir?.split('/projects/')[1] ?? project.name
+  await ctx.reply(
+    [
+      `📦 <b>${esc(project.name)}</b> entregado.`,
+      '',
+      `Snapshot guardado en: <code>projects/${esc(deliveryPath)}/</code>`,
+      '• README.md — descripción y estado funcional',
+      '• TASKS.md — detalle de todas las tareas',
+      '• .env.example — variables de entorno',
+      '• DELIVERY.json — metadata de entrega',
+    ].join('\n'),
+    HTML,
+  )
 }
 
 // ── /deploy <proyecto> ────────────────────────────────────────────────────────
@@ -237,13 +259,78 @@ export async function cmdDeploy(ctx: Ctx): Promise<void> {
   const project = await resolveProject(ctx, arg)
   if (!project) return
 
-  const res = await sendCommand('project.deploy', { projectId: project.id }, actorId(ctx))
-  if (!res.ok) {
-    await ctx.reply(`Error: ${res.error}`)
+  if (project.state !== 'delivered') {
+    await ctx.reply(
+      `⚠️ El proyecto debe estar en estado <b>delivered</b> para desplegarse.\nEstado actual: <code>${project.state}</code>`,
+      HTML,
+    )
     return
   }
 
-  await ctx.reply(`⚙️ Solicitud de despliegue recibida para <b>${esc(project.name)}</b>.`, HTML)
+  const prompt = startDeployConversation(actorId(ctx), project.id, project.name)
+  await ctx.reply(prompt, HTML)
+}
+
+// ── /cancel — cancels active deploy conversation ───────────────────────────────
+
+export async function cmdCancel(ctx: Ctx): Promise<void> {
+  if (isInConversation(actorId(ctx))) {
+    cancelConversation(actorId(ctx))
+    await ctx.reply('❌ Operación cancelada.')
+  } else {
+    await ctx.reply('No hay ninguna operación activa.')
+  }
+}
+
+// ── Message handler — drives deploy multi-step conversation ───────────────────
+
+export async function handleMessage(ctx: Ctx): Promise<void> {
+  const userId = actorId(ctx)
+  if (!isInConversation(userId)) return
+
+  const text = ctx.message?.text ?? ''
+  const result = handleConversationInput(userId, text)
+  if (!result) return
+
+  if (!result.done) {
+    await ctx.reply(result.reply, HTML)
+    return
+  }
+
+  // Conversation complete — send deploy command to API
+  await ctx.reply(result.reply, HTML)
+
+  const { params } = result
+  const res = await sendCommand(
+    'project.deploy',
+    {
+      projectId: params.projectId,
+      serverIp: params.serverIp,
+      sshUser: params.sshUser,
+      sshPass: params.sshPass,
+      domain: params.domain,
+    },
+    userId,
+  )
+
+  if (!res.ok) {
+    await ctx.reply(`❌ Error al iniciar despliegue: ${res.error}`)
+    return
+  }
+
+  await ctx.reply(
+    [
+      `🚀 <b>Deploy iniciado para ${esc(params.projectName)}</b>`,
+      '',
+      'El DevOps Agent está configurando:',
+      '• GitHub Actions CI/CD pipeline',
+      '• Scripts de despliegue en el servidor',
+      params.domain ? `• Dominio: <code>${params.domain}</code>` : '',
+      '',
+      'Recibirás una notificación cuando termine.',
+    ].filter(Boolean).join('\n'),
+    HTML,
+  )
 }
 
 // ── /projects ─────────────────────────────────────────────────────────────────

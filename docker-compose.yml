@@ -44,6 +44,7 @@ services:
       NODE_ENV: development
       MONGO_URI: mongodb://${MONGO_USER:-nitro}:${MONGO_PASS:-nitro}@mongo:27017/${MONGO_DB:-nitrocircus}?authSource=admin
       REDIS_URL: redis://redis:6379
+      MINIVERSE_URL: ${MINIVERSE_URL:-}
     depends_on:
       mongo:
         condition: service_healthy
@@ -52,6 +53,7 @@ services:
     volumes:
       - ./apps/api/src:/app/apps/api/src
       - ./packages/shared/src:/app/packages/shared/src
+      - ./projects:/app/projects
 
   bot:
     build:

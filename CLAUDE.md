@@ -10,27 +10,40 @@ NitroCircus is a multi-agent orchestration system for software development. A Pr
 
 ## Current Status
 
-The repository is in **Phase 0 (Foundation)**. All content is documentation — no implementation code exists yet. Phase 1 will introduce the Orchestrator API, Telegram bot, and MongoDB/Redis setup.
+**Phase 2 — Execution Agents**. Core infrastructure is running: Orchestrator API (Fastify), Telegram Bot (grammY), PM Agent (Groq/Llama), GitHub integration (Issues + Projects v2). Execution agents (Frontend, Backend, DevOps) use Claude Code SDK to write real code.
 
 ## Architecture
 
 5-layer model (see `docs/ARCHITECTURE.md`):
 
-1. **Telegram Bot Gateway** — Product Owner interface
-2. **Orchestrator API** — Central state machine and event hub
-3. **Execution Agents** — PM, Frontend, Backend, DevOps agents
-4. **Persistence & Queue** — MongoDB (state/audit) + Redis (queues/locks)
+1. **Telegram Bot Gateway** — Product Owner interface (Docker)
+2. **Orchestrator API** — Central state machine and event hub (Docker)
+3. **Execution Agents** — PM Agent (Docker/Groq) + Claude Code agents (host process)
+4. **Persistence & Queue** — MongoDB (state/audit) + Redis (queues/locks) (Docker)
 5. **Visualization** — Miniverse integration (non-critical)
 
 **State machine**: `backlog → planned → assigned → awaiting_start_approval → in_progress → blocked/in_review → done → delivered`
 
+### Agent Worker (host process)
+
+The execution agents (Frontend, Backend, DevOps) run as a **host process** (`workers/agent-runner`) — NOT in Docker — because they use the Claude Code SDK which requires the authenticated Claude Code Pro CLI.
+
+```
+Telegram → Bot → API → Redis queues → agent-runner (host) → writes code → git commit/PR
+                  ↑                                        ↓
+                  └──────── PATCH /tasks/:id/state ────────┘
+```
+
+Queues: `queue:frontend`, `queue:backend`, `queue:devops` (Redis LPUSH/BRPOP)
+
 ## Tech Stack
 
 - **Runtime**: Node.js + TypeScript
-- **Framework**: Fastify or NestJS (decision pending)
+- **Framework**: Fastify
 - **Databases**: MongoDB + Redis
 - **Infrastructure**: Linode VPS, Docker Compose, GitHub Actions
-- **LLM assignments**: GPT-5.4 Thinking (PM), Claude Sonnet 4.6 (Frontend), Claude Opus 4.6 (Backend), Codex/GPT-5.3 (DevOps)
+- **PM Agent LLM**: Groq (llama-3.3-70b-versatile) — free tier
+- **Execution Agents**: Claude Code SDK (`@anthropic-ai/claude-code`) — Claude Code Pro auth
 
 ## Agent File Ownership
 
@@ -41,6 +54,8 @@ The repository is in **Phase 0 (Foundation)**. All content is documentation — 
 | `.github/**`, `infra/**`, `docker/**`, `deploy/**` | DevOps |
 | `docs/**`, GitHub issues/board | PM |
 | `projects/<name>/` | Delivery output (read-only after delivery) |
+
+Each agent enforces its own path boundaries via the `allowedPaths` config in `workers/agent-runner/src/agents/`. Cross-path writes are denied by the Claude Code permission system.
 
 ## Git & GitHub Conventions
 
@@ -67,11 +82,14 @@ All changes go through PRs. GitHub Issues represent tasks created by the PM Agen
 cp .env.example .env          # fill in secrets
 npm install                   # install deps locally (for IDE support)
 
-# Docker dev environment
+# Docker dev environment (API + Bot + MongoDB + Redis)
 npm run dev                   # docker compose up --build (hot reload)
 npm run dev:down              # stop containers
 npm run dev:logs              # tail all logs
 npm run dev:clean             # stop + delete volumes (fresh DB)
+
+# Agent worker (runs on host, requires Claude Code Pro auth)
+npm run agents                # start agent-runner (workers/agent-runner)
 ```
 
 **Services exposed locally:**
@@ -80,3 +98,5 @@ npm run dev:clean             # stop + delete volumes (fresh DB)
 - Redis: localhost:6379
 
 **Hot reload**: source files in `apps/*/src/` and `packages/shared/src/` are volume-mounted; `tsx watch` picks up changes automatically without rebuilding the image.
+
+**Agent worker**: runs outside Docker on the host. Requires `claude` CLI authenticated (`claude --version` to verify). Consumes Redis queues and uses Claude Code SDK to write code.

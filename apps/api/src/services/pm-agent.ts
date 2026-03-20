@@ -119,7 +119,9 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
   const plan = JSON.parse(response.choices[0].message.content ?? '{}') as LlmPlan
 
   // ── Ensure GitHub labels exist for this project ───────────────────────────
-  await ensureProjectLabels(project.name).catch(() => {})
+  await ensureProjectLabels(project.name).catch((err) =>
+    console.warn('[pm-agent] GitHub label setup failed:', err instanceof Error ? err.message : err),
+  )
 
   // ── Persist epics + tasks ────────────────────────────────────────────────────
   let taskCount = 0
@@ -162,7 +164,7 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
           await setTaskGitHubIssue(task.id, result.issueNumber)
           if (result.projectItemId) await setTaskGitHubProjectItem(task.id, result.projectItemId)
         })
-        .catch(() => {})
+        .catch((err) => console.warn('[pm-agent] GitHub issue sync failed:', err instanceof Error ? err.message : err))
 
       taskCount++
     }

@@ -3,13 +3,15 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "workers/*"
   ],
   "scripts": {
     "dev": "docker compose up --build",
     "dev:down": "docker compose down",
     "dev:logs": "docker compose logs -f",
-    "dev:clean": "docker compose down -v"
+    "dev:clean": "docker compose down -v",
+    "agents": "npm run dev --workspace=workers/agent-runner"
   },
   "devDependencies": {
     "@types/node": "^22",

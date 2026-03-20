@@ -353,6 +353,8 @@ export async function syncTaskIssueState(
 
   // Move card on Project board
   if (projectItemId) {
-    await updateProjectItemStatus(projectItemId, newState).catch(() => {})
+    await updateProjectItemStatus(projectItemId, newState).catch((err) =>
+      console.warn('[github] Project board update failed:', err instanceof Error ? err.message : err),
+    )
   }
 }

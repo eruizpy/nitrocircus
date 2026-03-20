@@ -4,6 +4,8 @@ import { startProjectTasks, listTasksByProject, transitionTask } from '../servic
 import { planProject } from '../services/pm-agent'
 import { runAgent } from '../services/agent-runner'
 import { getEpic } from '../services/epic'
+import { deliverProject } from '../services/delivery'
+import { queueDeployTask } from '../services/agent-runner'
 
 interface CommandBody {
   type: string
@@ -31,9 +33,13 @@ export async function commandRoutes(app: FastifyInstance): Promise<void> {
       const result = await dispatch(type, payload, actorId)
       return reply.send({ ok: true, data: result })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error'
-      req.log.warn({ command: type, error: message }, 'Command failed')
-      return reply.status(400).send({ ok: false, error: message })
+      const raw = err instanceof Error ? err.message : 'Unknown error'
+      req.log.warn({ command: type, error: raw }, 'Command failed')
+      // Strip internal details (DB errors, stack traces) from client responses
+      const safe = raw.startsWith('Project') || raw.startsWith('Task') || raw.startsWith('Unknown')
+        ? raw
+        : 'Command failed'
+      return reply.status(400).send({ ok: false, error: safe })
     }
   })
 }
@@ -76,7 +82,9 @@ async function dispatch(
         const epicTitle = task.epicId
           ? await getEpic(task.epicId).then((e) => e?.title ?? 'Sin épica')
           : 'Sin épica'
-        runAgent(task, project, epicTitle).catch(() => {})
+        runAgent(task, project, epicTitle).catch((err) =>
+          console.warn(`[project.start] Failed to queue task ${task.id}:`, err instanceof Error ? err.message : err),
+        )
       }
 
       return { project: updatedProject, startedTasks }
@@ -95,6 +103,17 @@ async function dispatch(
       return { project, taskCount: tasks.length, byState }
     }
 
+    // ── agent → task state callback ───────────────────────────
+    // Called by the agent-runner worker after Claude Code finishes.
+    case 'task.agent_complete': {
+      const { taskId, state } = payload as { taskId: string; state: 'in_review' | 'blocked' }
+      // Deploy tasks (taskId: 'deploy-<projectId>') have no MongoDB task record
+      if (taskId.startsWith('deploy-')) {
+        return { taskId, state, note: 'deploy task — no state transition needed' }
+      }
+      return transitionTask(taskId, state, actorId)
+    }
+
     // ── /approve <task-id> ────────────────────────────────────
     case 'task.approve': {
       const { taskId } = payload as { taskId: string }
@@ -104,19 +123,33 @@ async function dispatch(
     // ── /deliver <project> ────────────────────────────────────
     case 'project.deliver': {
       const { projectId } = payload as { projectId: string }
-      return transitionProject(projectId, 'delivered', 'telegram', actorId)
+      const project = await getProject(projectId)
+      if (!project) throw new Error(`Project not found: ${projectId}`)
+      const delivered = await transitionProject(projectId, 'delivered', 'telegram', actorId)
+      const deliveryDir = await deliverProject(project)
+      return { project: delivered, deliveryDir }
     }
 
     // ── /deploy <project> ─────────────────────────────────────
-    // DevOps Agent integration added in Task #9.
     case 'project.deploy': {
-      const { projectId } = payload as { projectId: string }
+      const { projectId, serverIp, sshUser, sshPass, domain } =
+        payload as {
+          projectId: string
+          serverIp: string
+          sshUser: string
+          sshPass: string
+          domain?: string
+        }
+      if (!serverIp || !sshUser || !sshPass) {
+        throw new Error('serverIp, sshUser and sshPass are required')
+      }
       const project = await getProject(projectId)
       if (!project) throw new Error(`Project not found: ${projectId}`)
       if (project.state !== 'delivered') {
-        throw new Error(`Project must be in 'delivered' state before deploying (current: ${project.state})`)
+        throw new Error(`Project must be in 'delivered' state (current: ${project.state})`)
       }
-      return { queued: true, message: 'Deploy request queued. DevOps Agent will handle this in Task #9.' }
+      await queueDeployTask(project, { serverIp, sshUser, sshPass, domain })
+      return { queued: true }
     }
 
     default:

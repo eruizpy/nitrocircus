@@ -3,6 +3,7 @@ import { config } from './config'
 import {
   cmdNew, cmdPlan, cmdBoard, cmdStart, cmdStatus,
   cmdApprove, cmdDeliver, cmdDeploy, cmdProjects,
+  cmdCancel, handleMessage,
 } from './commands'
 
 const bot = new Bot(config.telegramToken)
@@ -25,7 +26,11 @@ bot.command('status',   cmdStatus)
 bot.command('approve',  cmdApprove)
 bot.command('deliver',  cmdDeliver)
 bot.command('deploy',   cmdDeploy)
+bot.command('cancel',   cmdCancel)
 bot.command('projects', cmdProjects)
+
+// Drives multi-step conversations (e.g. deploy parameter collection)
+bot.on('message:text', handleMessage)
 
 bot.command('help', (ctx) =>
   ctx.reply(
@@ -39,7 +44,8 @@ bot.command('help', (ctx) =>
       '/status &lt;proyecto&gt; — Resumen ejecutivo',
       '/approve &lt;task-id&gt; — Aprobar tarea',
       '/deliver &lt;proyecto&gt; — Marcar como entregado',
-      '/deploy &lt;proyecto&gt; — Solicitar despliegue',
+      '/deploy &lt;proyecto&gt; — Solicitar despliegue en Linode',
+      '/cancel — Cancelar operación en curso',
       '/projects — Listar proyectos',
     ].join('\n'),
     { parse_mode: 'HTML' },
@@ -56,7 +62,8 @@ async function registerCommands(): Promise<void> {
     { command: 'status',   description: 'Resumen ejecutivo del proyecto' },
     { command: 'approve',  description: 'Aprobar tarea específica' },
     { command: 'deliver',  description: 'Marcar proyecto como entregado' },
-    { command: 'deploy',   description: 'Solicitar preparación de despliegue' },
+    { command: 'deploy',   description: 'Desplegar proyecto en Linode' },
+    { command: 'cancel',   description: 'Cancelar operación en curso' },
     { command: 'projects', description: 'Listar todos los proyectos' },
     { command: 'help',     description: 'Mostrar ayuda' },
   ])

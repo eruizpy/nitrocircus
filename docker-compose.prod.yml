@@ -1,0 +1,26 @@
+# Production overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Key differences from dev:
+# - MongoDB and Redis ports are NOT exposed to the host (internal only)
+# - API port is exposed only to localhost (nginx handles external traffic)
+# - No source volume mounts (uses built image)
+
+services:
+  mongo:
+    ports: !reset []  # Remove dev port mapping — internal network only
+
+  redis:
+    ports: !reset []  # Remove dev port mapping — internal network only
+
+  api:
+    ports:
+      - "127.0.0.1:3000:3000"  # Only accessible from localhost (nginx proxy)
+    volumes: !reset []          # No source mounts — use built image
+    environment:
+      NODE_ENV: production
+
+  bot:
+    volumes: !reset []          # No source mounts — use built image
+    environment:
+      NODE_ENV: production

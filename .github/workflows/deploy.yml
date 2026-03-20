@@ -1,0 +1,62 @@
+name: Deploy NitroCircus
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Type check ────────────────────────────────────────────────────────────────
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - run: npx tsc --noEmit -p apps/api/tsconfig.json
+      - run: npx tsc --noEmit -p apps/bot/tsconfig.json
+      - run: npx tsc --noEmit -p workers/agent-runner/tsconfig.json
+
+  # ── Deploy ────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Linode VPS
+    needs: typecheck
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            echo "==> Pulling latest code..."
+            cd /opt/nitrocircus
+            git pull origin main
+
+            echo "==> Installing dependencies..."
+            npm install
+
+            echo "==> Rebuilding Docker services..."
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
+
+            echo "==> Restarting agent-runner..."
+            pm2 restart nitrocircus-agents 2>/dev/null || \
+              pm2 start "npm run agents" --name nitrocircus-agents
+            pm2 save
+
+            echo "==> Health check..."
+            sleep 5
+            curl -sf http://localhost:3000/health || (echo "Health check failed" && exit 1)
+
+            echo "==> Deploy complete."
