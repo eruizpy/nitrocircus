@@ -3,6 +3,10 @@ import type { Task, TaskState, ActorType, AgentType, Priority } from '@nitrocirc
 import { assertTaskTransition } from '@nitrocircus/shared'
 import { collections, type TaskDoc } from '../db/collections'
 import { logEvent } from './event-log'
+import { syncTaskIssueState } from './github'
+
+// States worth syncing to GitHub (skip rapid planning transitions)
+const GITHUB_SYNC_STATES = new Set<TaskState>(['in_progress', 'blocked', 'in_review', 'done', 'delivered'])
 
 function toTask(doc: TaskDoc): Task {
   const { _id, ...rest } = doc
@@ -74,7 +78,19 @@ export async function transitionTask(
     actorId,
     metadata: { projectId: doc.projectId },
   })
+
+  if (doc.githubIssueNumber && GITHUB_SYNC_STATES.has(to)) {
+    syncTaskIssueState(doc.githubIssueNumber, to).catch(() => {})
+  }
+
   return toTask({ ...doc, state: to, updatedAt })
+}
+
+export async function setTaskGitHubIssue(id: string, issueNumber: number): Promise<void> {
+  await collections.tasks().updateOne(
+    { _id: toObjectId(id) },
+    { $set: { githubIssueNumber: issueNumber, updatedAt: new Date() } },
+  )
 }
 
 /**

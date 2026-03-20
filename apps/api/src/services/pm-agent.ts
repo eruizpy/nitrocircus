@@ -1,8 +1,9 @@
 import Groq from 'groq-sdk'
 import type { Project, AgentType, Priority } from '@nitrocircus/shared'
 import { createEpic } from './epic'
-import { createTask, transitionTask, listTasksByProject } from './task'
+import { createTask, transitionTask, listTasksByProject, setTaskGitHubIssue } from './task'
 import { logEvent } from './event-log'
+import { ensureProjectLabels, createTaskIssue } from './github'
 
 // ── Types returned by the LLM ─────────────────────────────────────────────────
 
@@ -117,6 +118,9 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
 
   const plan = JSON.parse(response.choices[0].message.content ?? '{}') as LlmPlan
 
+  // ── Ensure GitHub labels exist for this project ───────────────────────────
+  await ensureProjectLabels(project.name).catch(() => {})
+
   // ── Persist epics + tasks ────────────────────────────────────────────────────
   let taskCount = 0
   for (const epicData of plan.epics ?? []) {
@@ -141,6 +145,23 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
       await transitionTask(task.id, 'planned', 'pm')
       await transitionTask(task.id, 'assigned', 'pm')
       await transitionTask(task.id, 'awaiting_start_approval', 'pm')
+
+      // Sync to GitHub (fire-and-forget — don't fail if GitHub is not configured)
+      createTaskIssue({
+        taskId: task.id,
+        title: taskData.title,
+        description: taskData.description,
+        acceptanceCriteria: taskData.acceptanceCriteria ?? [],
+        assignedAgent: taskData.assignedAgent ?? 'backend',
+        priority: taskData.priority ?? 'medium',
+        projectName: project.name,
+        epicTitle: epicData.title,
+      })
+        .then((issueNumber) => {
+          if (issueNumber) return setTaskGitHubIssue(task.id, issueNumber)
+        })
+        .catch(() => {})
+
       taskCount++
     }
   }
