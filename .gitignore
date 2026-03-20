@@ -1,0 +1,4 @@
+.DS_Store
+
+# macOS finder metadata in nested folders
+**/.DS_Store
