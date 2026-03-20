@@ -81,8 +81,10 @@ mkdir -p /opt/miniverse
 cd /opt/miniverse
 if [ ! -f package.json ]; then
   npx --yes create-miniverse@latest .
+  npm install
+  npm run build
 fi
-pm2 start "npx miniverse" --name miniverse -- --port 4321 2>/dev/null || \
+pm2 start "npm run server" --name miniverse 2>/dev/null || \
   pm2 restart miniverse
 cd "$APP_DIR"
 

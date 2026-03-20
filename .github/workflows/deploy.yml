@@ -76,8 +76,10 @@ jobs:
               cd /opt/miniverse
               if [ ! -f package.json ]; then
                 npx --yes create-miniverse@latest .
+                npm install
+                npm run build
               fi
-              pm2 start "npx miniverse" --name miniverse -- --port 4321
+              pm2 start "npm run server" --name miniverse
             fi
             cd /opt/nitrocircus
 
