@@ -1,4 +1,4 @@
-import OpenAI from 'openai'
+import Groq from 'groq-sdk'
 import type { Project, AgentType, Priority } from '@nitrocircus/shared'
 import { createEpic } from './epic'
 import { createTask, transitionTask, listTasksByProject } from './task'
@@ -72,30 +72,50 @@ Reglas:
 - Sé específico en los criterios de aceptación
 - No asumas que la planificación autoriza el inicio`
 
+// ── Retry helper (exponential backoff for 429) ────────────────────────────────
+
+async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let delay = 5_000
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const is429 =
+        String(err).includes('429') ||
+        String(err).toLowerCase().includes('rate_limit') ||
+        String(err).toLowerCase().includes('rate limit')
+      if (!is429 || attempt === maxRetries) throw err
+      await new Promise((res) => setTimeout(res, delay))
+      delay = Math.min(delay * 2, 30_000)
+    }
+  }
+  throw new Error('unreachable')
+}
+
 // ── Main function ─────────────────────────────────────────────────────────────
 
 export async function planProject(project: Project, actorId: string): Promise<PlanResult> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('OPENAI_API_KEY no configurada — el PM Agent no puede operar')
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) throw new Error('GROQ_API_KEY no configurada — el PM Agent no puede operar')
 
-  const model = process.env.PM_AGENT_MODEL ?? 'gpt-4o'
-  const client = new OpenAI({ apiKey })
+  const modelName = process.env.PM_AGENT_MODEL ?? 'llama-3.3-70b-versatile'
+  const client = new Groq({ apiKey })
 
-  // ── Call LLM ────────────────────────────────────────────────────────────────
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: `Proyecto: "${project.name}"\nDescripción: ${project.description}\n\nCrea el plan de trabajo.`,
-      },
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.2,
-  })
+  // ── Call LLM (with retry on 429) ─────────────────────────────────────────
+  const prompt = `Proyecto: "${project.name}"\nDescripción: ${project.description}\n\nCrea el plan de trabajo.`
+  const response = await callWithRetry(() =>
+    client.chat.completions.create({
+      model: modelName,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  )
 
-  const plan = JSON.parse(response.choices[0].message.content!) as LlmPlan
+  const plan = JSON.parse(response.choices[0].message.content ?? '{}') as LlmPlan
 
   // ── Persist epics + tasks ────────────────────────────────────────────────────
   let taskCount = 0
@@ -134,10 +154,9 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
     actorType: 'pm',
     actorId,
     metadata: {
-      model,
+      model: modelName,
       epicCount: plan.epics?.length ?? 0,
       taskCount,
-      usage: response.usage,
     },
   })
 

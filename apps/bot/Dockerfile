@@ -12,7 +12,7 @@ RUN npm install
 # grammY imports node-fetch from /app/node_modules/, so the patch must go there.
 # node-fetch@2 defaults to keepAlive:true and resolves IPv6, which times out in Docker on macOS.
 RUN cp node_modules/node-fetch/lib/index.js node_modules/node-fetch/lib/index.orig.js && \
-    printf "'use strict';\nconst https=require('https'),dns=require('dns');\nconst _a=new https.Agent({keepAlive:false,lookup:(h,o,cb)=>dns.lookup(h,{...o,family:4},cb)});\nconst orig=require('./index.orig.js');\nconst fetch=(url,opts={})=>orig(url,{agent:_a,...opts});\nObject.assign(fetch,orig);\nmodule.exports=fetch;\n" \
+    printf "'use strict';\nconst https=require('https'),dns=require('dns');\nconst _a=new https.Agent({keepAlive:false,lookup:(h,o,cb)=>dns.lookup(h,{...o,family:4},cb)});\nconst orig=require('./index.orig.js');\nconst fetch=(url,opts={})=>{const o2=Object.assign({},opts);delete o2.agent;return orig(url,Object.assign({agent:_a},o2));};\nObject.assign(fetch,orig);\nfetch.default=fetch;\nmodule.exports=fetch;\n" \
       > node_modules/node-fetch/lib/index.js
 
 # Copy source (overridden by volume mount in dev)

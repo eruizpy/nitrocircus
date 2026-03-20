@@ -68,7 +68,7 @@ export async function cmdPlan(ctx: Ctx): Promise<void> {
   const project = await resolveProject(ctx, arg)
   if (!project) return
 
-  await ctx.reply(`⏳ El PM Agent está planificando <b>${esc(project.name)}</b>...`, HTML)
+  await ctx.reply(`⏳ El PM Agent está planificando <b>${esc(project.name)}</b>...\n<i>Puede tardar hasta 1 minuto si el LLM está bajo alta demanda.</i>`, HTML)
 
   const res = await sendCommand<PlanResult>('project.plan', { projectId: project.id }, actorId(ctx))
   if (!res.ok || !res.data) {

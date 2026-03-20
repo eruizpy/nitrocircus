@@ -64,7 +64,11 @@ async function registerCommands(): Promise<void> {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 registerCommands()
-  .then(() => bot.start())
+  .then(() => {
+    console.log('Commands registered. Starting bot polling...')
+    return bot.start()
+  })
+  .then(() => console.log('Bot stopped.'))
   .catch((err) => {
     console.error('Failed to start bot:', err)
     process.exit(1)
