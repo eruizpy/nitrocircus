@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { createProject, getProject, transitionProject } from '../services/project'
 import { startProjectTasks, listTasksByProject, transitionTask } from '../services/task'
+import { planProject } from '../services/pm-agent'
 
 interface CommandBody {
   type: string
@@ -48,10 +49,14 @@ async function dispatch(
     }
 
     // ── /plan <project> ────────────────────────────────────────
-    // Transitions project to `planned`. PM Agent integration added in Task #5.
+    // PM Agent decomposes the project into epics + tasks and sets them to awaiting_start_approval.
     case 'project.plan': {
       const { projectId } = payload as { projectId: string }
-      return transitionProject(projectId, 'planned', 'telegram', actorId)
+      const project = await getProject(projectId)
+      if (!project) throw new Error(`Project not found: ${projectId}`)
+      const plan = await planProject(project, actorId)
+      await transitionProject(projectId, 'planned', 'pm', actorId)
+      return plan
     }
 
     // ── /start <project> ──────────────────────────────────────

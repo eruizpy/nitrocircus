@@ -11,6 +11,7 @@
     "@nitrocircus/shared": "*",
     "fastify": "^5",
     "ioredis": "^5",
-    "mongodb": "^6"
+    "mongodb": "^6",
+    "openai": "^4"
   }
 }

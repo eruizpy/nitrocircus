@@ -1,5 +1,14 @@
 import type { Context } from 'grammy'
 import type { Project } from '@nitrocircus/shared'
+
+interface PlanResult {
+  summary: string
+  epicCount: number
+  taskCount: number
+  tasks: Array<{ id: string; title: string; assignedAgent?: string; state: string }>
+  risks: string[]
+  nextAction: string
+}
 import { sendCommand, findProject, getProjectTasks } from './orchestrator'
 import { formatProject, formatBoard, formatTaskList, esc } from './format'
 
@@ -59,14 +68,41 @@ export async function cmdPlan(ctx: Ctx): Promise<void> {
   const project = await resolveProject(ctx, arg)
   if (!project) return
 
-  const res = await sendCommand('project.plan', { projectId: project.id }, actorId(ctx))
-  if (!res.ok) {
+  await ctx.reply(`⏳ El PM Agent está planificando <b>${esc(project.name)}</b>...`, HTML)
+
+  const res = await sendCommand<PlanResult>('project.plan', { projectId: project.id }, actorId(ctx))
+  if (!res.ok || !res.data) {
     await ctx.reply(`Error: ${res.error}`)
     return
   }
 
+  const plan = res.data
+  const taskLines = plan.tasks
+    .slice(0, 8)
+    .map((t) => `  • ${esc(t.title)} [${t.assignedAgent ?? '?'}]`)
+    .join('\n')
+  const riskLines = plan.risks.length
+    ? plan.risks.map((r) => `  ⚠️ ${esc(r)}`).join('\n')
+    : '  Ninguno identificado'
+
   await ctx.reply(
-    `Planificación solicitada para <b>${esc(project.name)}</b>.\nEl PM Agent procesará el trabajo. (Integración completa en Tarea #5)`,
+    [
+      `📋 <b>Plan: ${esc(project.name)}</b>`,
+      '',
+      `${esc(plan.summary)}`,
+      '',
+      `Épicas: <b>${plan.epicCount}</b> | Tareas: <b>${plan.taskCount}</b>`,
+      '',
+      '<b>Tareas listas para iniciar:</b>',
+      taskLines + (plan.taskCount > 8 ? `\n  ... y ${plan.taskCount - 8} más` : ''),
+      '',
+      '<b>Riesgos:</b>',
+      riskLines,
+      '',
+      `💡 ${esc(plan.nextAction)}`,
+      '',
+      `⏳ Usa /start ${esc(project.name)} para autorizar el inicio.`,
+    ].join('\n'),
     HTML,
   )
 }
