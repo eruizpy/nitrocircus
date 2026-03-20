@@ -75,8 +75,20 @@ else
   echo "==> SSH key already exists."
 fi
 
+# ── Miniverse ─────────────────────────────────────────────────────────────────
+echo "==> Setting up Miniverse on port 4321..."
+mkdir -p /opt/miniverse
+cd /opt/miniverse
+if [ ! -f package.json ]; then
+  npx --yes create-miniverse@latest .
+fi
+pm2 start "npx miniverse" --name miniverse -- --port 4321 2>/dev/null || \
+  pm2 restart miniverse
+cd "$APP_DIR"
+
 # ── PM2 startup ───────────────────────────────────────────────────────────────
 pm2 startup systemd -u root --hp /root | tail -1 | bash || true
+pm2 save
 
 echo ""
 echo "============================================"
@@ -100,5 +112,9 @@ echo "   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
 echo "   pm2 start 'npm run agents' --name nitrocircus-agents"
 echo "   pm2 save"
 echo ""
-echo "5. Haz push a main para verificar el pipeline de GitHub Actions."
+echo "5. Miniverse (puerto 4321) ya está corriendo via PM2."
+echo "   Accede en: http://$(curl -s ifconfig.me 2>/dev/null || echo '<ip-del-servidor>'):4321"
+echo "   (asegúrate de abrir el puerto en UFW: ufw allow 4321/tcp)"
+echo ""
+echo "6. Haz push a main para verificar el pipeline de GitHub Actions."
 echo ""

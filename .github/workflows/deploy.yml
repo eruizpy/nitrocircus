@@ -66,6 +66,21 @@ jobs:
             echo "==> Restarting agent-runner..."
             pm2 restart nitrocircus-agents 2>/dev/null || \
               pm2 start "npm run agents" --name nitrocircus-agents
+
+            echo "==> Starting Miniverse..."
+            if pm2 describe miniverse > /dev/null 2>&1; then
+              pm2 restart miniverse
+            else
+              # First run: scaffold + start
+              mkdir -p /opt/miniverse
+              cd /opt/miniverse
+              if [ ! -f package.json ]; then
+                npx --yes create-miniverse@latest .
+              fi
+              pm2 start "npx miniverse" --name miniverse -- --port 4321
+            fi
+            cd /opt/nitrocircus
+
             pm2 save
 
             echo "==> Health check..."

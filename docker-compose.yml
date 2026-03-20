@@ -44,7 +44,9 @@ services:
       NODE_ENV: development
       MONGO_URI: mongodb://${MONGO_USER:-nitro}:${MONGO_PASS:-nitro}@mongo:27017/${MONGO_DB:-nitrocircus}?authSource=admin
       REDIS_URL: redis://redis:6379
-      MINIVERSE_URL: ${MINIVERSE_URL:-}
+      MINIVERSE_URL: ${MINIVERSE_URL:-http://host.docker.internal:4321}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       mongo:
         condition: service_healthy
