@@ -1,11 +1,13 @@
 import type { Context } from 'grammy'
 import type { Project } from '@nitrocircus/shared'
 import { sendCommand, findProject, getProjectTasks } from './orchestrator'
-import { formatProject, formatBoard, formatTaskList } from './format'
+import { formatProject, formatBoard, formatTaskList, esc } from './format'
 
 type Ctx = Context
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+const HTML = { parse_mode: 'HTML' as const }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function actorId(ctx: Ctx): string {
   return String(ctx.from!.id)
@@ -24,7 +26,7 @@ function parseArg(ctx: Ctx): string {
   return (ctx.match as string | undefined)?.trim() ?? ''
 }
 
-// ── /new <nombre> ────────────────────────────────────────────────────────────
+// ── /new <nombre> ─────────────────────────────────────────────────────────────
 
 export async function cmdNew(ctx: Ctx): Promise<void> {
   const name = parseArg(ctx)
@@ -40,12 +42,12 @@ export async function cmdNew(ctx: Ctx): Promise<void> {
   }
 
   await ctx.reply(
-    `Proyecto creado ✅\n\n${formatProject(res.data)}\n\nUsa /plan ${res.data.id} para planificarlo.`,
-    { parse_mode: 'MarkdownV2' },
+    `Proyecto creado ✅\n\n${formatProject(res.data)}\n\nUsa /plan <code>${res.data.id}</code> para planificarlo.`,
+    HTML,
   )
 }
 
-// ── /plan <proyecto> ─────────────────────────────────────────────────────────
+// ── /plan <proyecto> ──────────────────────────────────────────────────────────
 
 export async function cmdPlan(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -64,12 +66,12 @@ export async function cmdPlan(ctx: Ctx): Promise<void> {
   }
 
   await ctx.reply(
-    `Planificación solicitada para *${project.name}*\\.\nEl PM Agent procesará el trabajo\\. \\(Integración completa en Tarea \\#5\\)`,
-    { parse_mode: 'MarkdownV2' },
+    `Planificación solicitada para <b>${esc(project.name)}</b>.\nEl PM Agent procesará el trabajo. (Integración completa en Tarea #5)`,
+    HTML,
   )
 }
 
-// ── /board <proyecto> ────────────────────────────────────────────────────────
+// ── /board <proyecto> ─────────────────────────────────────────────────────────
 
 export async function cmdBoard(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -92,12 +94,10 @@ export async function cmdBoard(ctx: Ctx): Promise<void> {
   }
 
   const tasks = await getProjectTasks(project.id)
-  await ctx.reply(formatBoard(res.data.project, tasks, res.data.byState), {
-    parse_mode: 'MarkdownV2',
-  })
+  await ctx.reply(formatBoard(res.data.project, tasks, res.data.byState), HTML)
 }
 
-// ── /start <proyecto> ────────────────────────────────────────────────────────
+// ── /start <proyecto> ─────────────────────────────────────────────────────────
 
 export async function cmdStart(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -122,13 +122,13 @@ export async function cmdStart(ctx: Ctx): Promise<void> {
   const count = res.data.startedTasks.length
   await ctx.reply(
     count > 0
-      ? `🚀 Desarrollo autorizado para *${project.name}*\\.\n${count} tarea\\(s\\) activada\\(s\\)\\.`
-      : `⚠️ No hay tareas en *${project.name}* esperando aprobación\\.`,
-    { parse_mode: 'MarkdownV2' },
+      ? `🚀 Desarrollo autorizado para <b>${esc(project.name)}</b>.\n${count} tarea(s) activada(s).`
+      : `⚠️ No hay tareas en <b>${esc(project.name)}</b> esperando aprobación.`,
+    HTML,
   )
 }
 
-// ── /status <proyecto> ───────────────────────────────────────────────────────
+// ── /status <proyecto> ────────────────────────────────────────────────────────
 
 export async function cmdStatus(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -145,12 +145,12 @@ export async function cmdStatus(ctx: Ctx): Promise<void> {
   const total = tasks.length
 
   await ctx.reply(
-    `📊 *${project.name}*\nEstado: ${project.state}\nProgreso: ${done}/${total} tareas completadas\n\n${formatTaskList(tasks)}`,
-    { parse_mode: 'MarkdownV2' },
+    `📊 <b>${esc(project.name)}</b>\nEstado: ${project.state}\nProgreso: ${done}/${total} tareas completadas\n\n${formatTaskList(tasks)}`,
+    HTML,
   )
 }
 
-// ── /approve <task-id> ───────────────────────────────────────────────────────
+// ── /approve <task-id> ────────────────────────────────────────────────────────
 
 export async function cmdApprove(ctx: Ctx): Promise<void> {
   const taskId = parseArg(ctx)
@@ -165,10 +165,10 @@ export async function cmdApprove(ctx: Ctx): Promise<void> {
     return
   }
 
-  await ctx.reply(`✅ Tarea aprobada: \`${taskId}\``, { parse_mode: 'MarkdownV2' })
+  await ctx.reply(`✅ Tarea aprobada: <code>${taskId}</code>`, HTML)
 }
 
-// ── /deliver <proyecto> ──────────────────────────────────────────────────────
+// ── /deliver <proyecto> ───────────────────────────────────────────────────────
 
 export async function cmdDeliver(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -186,12 +186,10 @@ export async function cmdDeliver(ctx: Ctx): Promise<void> {
     return
   }
 
-  await ctx.reply(`📦 Proyecto *${project.name}* marcado como entregado\\.`, {
-    parse_mode: 'MarkdownV2',
-  })
+  await ctx.reply(`📦 Proyecto <b>${esc(project.name)}</b> marcado como entregado.`, HTML)
 }
 
-// ── /deploy <proyecto> ───────────────────────────────────────────────────────
+// ── /deploy <proyecto> ────────────────────────────────────────────────────────
 
 export async function cmdDeploy(ctx: Ctx): Promise<void> {
   const arg = parseArg(ctx)
@@ -209,12 +207,10 @@ export async function cmdDeploy(ctx: Ctx): Promise<void> {
     return
   }
 
-  await ctx.reply(`⚙️ Solicitud de despliegue recibida para *${project.name}*\\.`, {
-    parse_mode: 'MarkdownV2',
-  })
+  await ctx.reply(`⚙️ Solicitud de despliegue recibida para <b>${esc(project.name)}</b>.`, HTML)
 }
 
-// ── /projects ────────────────────────────────────────────────────────────────
+// ── /projects ─────────────────────────────────────────────────────────────────
 
 export async function cmdProjects(ctx: Ctx): Promise<void> {
   const { getProjects } = await import('./orchestrator')
@@ -225,6 +221,8 @@ export async function cmdProjects(ctx: Ctx): Promise<void> {
     return
   }
 
-  const lines = projects.map((p) => `• *${p.name}* \\[${p.state}\\]\n  ID: \`${p.id}\``).join('\n\n')
-  await ctx.reply(lines, { parse_mode: 'MarkdownV2' })
+  const lines = projects
+    .map((p) => `• <b>${esc(p.name)}</b> [${p.state}]\n  ID: <code>${p.id}</code>`)
+    .join('\n\n')
+  await ctx.reply(lines, HTML)
 }

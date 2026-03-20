@@ -8,7 +8,6 @@ import {
 const bot = new Bot(config.telegramToken)
 
 // ── Authorization middleware ──────────────────────────────────────────────────
-// Only the configured Product Owner can issue commands.
 bot.use(async (ctx, next) => {
   if (ctx.from?.id !== config.ownerChatId) {
     await ctx.reply('No autorizado.')
@@ -31,19 +30,19 @@ bot.command('projects', cmdProjects)
 bot.command('help', (ctx) =>
   ctx.reply(
     [
-      '*NitroCircus Bot*',
+      '<b>NitroCircus Bot</b>',
       '',
-      '/new <nombre> — Crear nuevo proyecto',
-      '/plan <proyecto> — Solicitar planificación',
-      '/board <proyecto> — Ver tablero',
-      '/start <proyecto> — Autorizar inicio de desarrollo',
-      '/status <proyecto> — Resumen ejecutivo',
-      '/approve <task\\-id> — Aprobar tarea',
-      '/deliver <proyecto> — Marcar como entregado',
-      '/deploy <proyecto> — Solicitar despliegue',
+      '/new &lt;nombre&gt; — Crear nuevo proyecto',
+      '/plan &lt;proyecto&gt; — Solicitar planificación',
+      '/board &lt;proyecto&gt; — Ver tablero',
+      '/start &lt;proyecto&gt; — Autorizar inicio de desarrollo',
+      '/status &lt;proyecto&gt; — Resumen ejecutivo',
+      '/approve &lt;task-id&gt; — Aprobar tarea',
+      '/deliver &lt;proyecto&gt; — Marcar como entregado',
+      '/deploy &lt;proyecto&gt; — Solicitar despliegue',
       '/projects — Listar proyectos',
     ].join('\n'),
-    { parse_mode: 'MarkdownV2' },
+    { parse_mode: 'HTML' },
   ),
 )
 

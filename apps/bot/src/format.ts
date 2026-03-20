@@ -12,8 +12,13 @@ const STATE_EMOJI: Record<TaskState, string> = {
   delivered:               '🚀',
 }
 
+/** Escape HTML special characters for Telegram HTML parse mode. */
+export function esc(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 export function formatProject(p: Project): string {
-  return `*${escMd(p.name)}* — ${p.state}\nID: \`${p.id}\``
+  return `<b>${esc(p.name)}</b> — ${p.state}\nID: <code>${p.id}</code>`
 }
 
 export function formatBoard(
@@ -22,7 +27,7 @@ export function formatBoard(
   byState: Record<string, number>,
 ): string {
   const lines = [
-    `*${escMd(project.name)}* \\[${project.state}\\]`,
+    `<b>${esc(project.name)}</b> [${project.state}]`,
     `Total tareas: ${tasks.length}`,
     '',
   ]
@@ -34,13 +39,8 @@ export function formatBoard(
 }
 
 export function formatTaskList(tasks: Task[]): string {
-  if (tasks.length === 0) return '_Sin tareas_'
+  if (tasks.length === 0) return '<i>Sin tareas</i>'
   return tasks
-    .map((t) => `${STATE_EMOJI[t.state]} *${escMd(t.title)}* — ${t.state}\nID: \`${t.id}\``)
+    .map((t) => `${STATE_EMOJI[t.state]} <b>${esc(t.title)}</b> — ${t.state}\nID: <code>${t.id}</code>`)
     .join('\n\n')
-}
-
-/** Escape special MarkdownV2 characters. */
-function escMd(text: string): string {
-  return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&')
 }
