@@ -111,7 +111,7 @@ async function dispatch(
       if (taskId.startsWith('deploy-')) {
         return { taskId, state, note: 'deploy task — no state transition needed' }
       }
-      return transitionTask(taskId, state, actorId)
+      return transitionTask(taskId, state, 'system', actorId)
     }
 
     // ── /approve <task-id> ────────────────────────────────────

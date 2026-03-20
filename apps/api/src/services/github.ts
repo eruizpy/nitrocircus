@@ -140,7 +140,7 @@ export async function updateProjectItemStatus(itemId: string, taskState: TaskSta
 
 async function ghFetch<T = unknown>(
   path: string,
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT',
   body?: unknown,
 ): Promise<T> {
   const cfg = ghConfig()
