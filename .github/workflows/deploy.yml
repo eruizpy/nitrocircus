@@ -47,9 +47,18 @@ jobs:
             echo "==> Installing dependencies..."
             npm install
 
+            echo "==> Configuring firewall..."
+            ufw allow 22/tcp    > /dev/null 2>&1 || true
+            ufw allow 80/tcp    > /dev/null 2>&1 || true
+            ufw allow 443/tcp   > /dev/null 2>&1 || true
+            ufw deny 3000/tcp   > /dev/null 2>&1 || true
+            ufw deny 27017/tcp  > /dev/null 2>&1 || true
+            ufw deny 6379/tcp   > /dev/null 2>&1 || true
+            ufw --force enable  > /dev/null 2>&1 || true
+
             echo "==> Stopping existing services..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml down --remove-orphans
-            sleep 3
+            sleep 2
 
             echo "==> Rebuilding Docker services..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
