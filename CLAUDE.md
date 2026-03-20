@@ -62,4 +62,21 @@ All changes go through PRs. GitHub Issues represent tasks created by the PM Agen
 
 ## Development Commands
 
-> Commands will be added here as implementation progresses through the roadmap phases.
+```bash
+# First time setup
+cp .env.example .env          # fill in secrets
+npm install                   # install deps locally (for IDE support)
+
+# Docker dev environment
+npm run dev                   # docker compose up --build (hot reload)
+npm run dev:down              # stop containers
+npm run dev:logs              # tail all logs
+npm run dev:clean             # stop + delete volumes (fresh DB)
+```
+
+**Services exposed locally:**
+- API: http://localhost:3000 (`GET /health` to verify)
+- MongoDB: localhost:27017
+- Redis: localhost:6379
+
+**Hot reload**: source files in `apps/*/src/` and `packages/shared/src/` are volume-mounted; `tsx watch` picks up changes automatically without rebuilding the image.
