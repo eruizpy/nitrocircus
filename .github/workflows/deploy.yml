@@ -48,7 +48,8 @@ jobs:
             npm install
 
             echo "==> Rebuilding Docker services..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml down --remove-orphans
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
             echo "==> Restarting agent-runner..."
             pm2 restart nitrocircus-agents 2>/dev/null || \
