@@ -13,7 +13,7 @@ echo "============================================"
 
 # ── System dependencies ────────────────────────────────────────────────────────
 apt-get update -qq
-apt-get install -y -qq curl git
+apt-get install -y -qq curl git nginx
 
 # ── Docker ────────────────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
@@ -76,17 +76,50 @@ else
 fi
 
 # ── Miniverse ─────────────────────────────────────────────────────────────────
-echo "==> Setting up Miniverse on port 4321..."
+echo "==> Setting up Miniverse (backend port 4322, canvas port 4321 via nginx)..."
 mkdir -p /opt/miniverse
 cd /opt/miniverse
 if [ ! -f package.json ]; then
   npx --yes create-miniverse@latest .
   npm install
+  # Fix WebSocket URL: use dynamic host instead of hardcoded localhost
+  echo 'import re' > /tmp/fix_ws.py
+  echo 'f = "/opt/miniverse/src/main.ts"' >> /tmp/fix_ws.py
+  echo 'try:' >> /tmp/fix_ws.py
+  echo '    c = open(f).read()' >> /tmp/fix_ws.py
+  echo '    c = re.sub("url:\\s*\\x27ws://[^\\x27]+/ws\\x27", "url: `ws://${window.location.host}/ws`", c)' >> /tmp/fix_ws.py
+  echo '    open(f,"w").write(c); print("WS URL fixed")' >> /tmp/fix_ws.py
+  echo 'except Exception as e: print("WS fix skipped:", e)' >> /tmp/fix_ws.py
+  python3 /tmp/fix_ws.py
   npm run build
 fi
-pm2 start "npm run server" --name miniverse 2>/dev/null || \
+pm2 start "npm run server -- --port 4322" --name miniverse 2>/dev/null || \
   pm2 restart miniverse
 cd "$APP_DIR"
+
+# ── nginx config for Miniverse ─────────────────────────────────────────────────
+echo "==> Configuring nginx for Miniverse (port 4321)..."
+if [ ! -f /etc/nginx/sites-available/miniverse ]; then
+  printf '%s\n' \
+    'server {' \
+    '    listen 4321;' \
+    '    root /opt/miniverse/dist;' \
+    '    index index.html;' \
+    '    location /api/ {' \
+    '        proxy_pass http://localhost:4322;' \
+    '        proxy_http_version 1.1;' \
+    '    }' \
+    '    location /ws {' \
+    '        proxy_pass http://localhost:4322;' \
+    '        proxy_http_version 1.1;' \
+    '        proxy_set_header Upgrade $http_upgrade;' \
+    '        proxy_set_header Connection "upgrade";' \
+    '    }' \
+    '    location / { try_files $uri $uri/ /index.html; }' \
+    '}' > /etc/nginx/sites-available/miniverse
+  ln -sf /etc/nginx/sites-available/miniverse /etc/nginx/sites-enabled/miniverse
+fi
+nginx -t && systemctl enable nginx && systemctl reload nginx
 
 # ── PM2 startup ───────────────────────────────────────────────────────────────
 pm2 startup systemd -u root --hp /root | tail -1 | bash || true
@@ -114,9 +147,9 @@ echo "   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
 echo "   pm2 start 'npm run agents' --name nitrocircus-agents"
 echo "   pm2 save"
 echo ""
-echo "5. Miniverse (puerto 4321) ya está corriendo via PM2."
-echo "   Accede en: http://$(curl -s ifconfig.me 2>/dev/null || echo '<ip-del-servidor>'):4321"
-echo "   (asegúrate de abrir el puerto en UFW: ufw allow 4321/tcp)"
+echo "5. Miniverse canvas ya está disponible en:"
+echo "   http://$(curl -s ifconfig.me 2>/dev/null || echo '<ip-del-servidor>'):4321"
+echo "   (nginx sirve el canvas en :4321, backend Miniverse en :4322 — interno)"
 echo ""
 echo "6. Haz push a main para verificar el pipeline de GitHub Actions."
 echo ""

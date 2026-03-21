@@ -51,7 +51,9 @@ jobs:
             ufw allow 22/tcp    > /dev/null 2>&1 || true
             ufw allow 80/tcp    > /dev/null 2>&1 || true
             ufw allow 443/tcp   > /dev/null 2>&1 || true
+            ufw allow 4321/tcp  > /dev/null 2>&1 || true
             ufw deny 3000/tcp   > /dev/null 2>&1 || true
+            ufw deny 4322/tcp   > /dev/null 2>&1 || true
             ufw deny 27017/tcp  > /dev/null 2>&1 || true
             ufw deny 6379/tcp   > /dev/null 2>&1 || true
             ufw --force enable  > /dev/null 2>&1 || true
@@ -76,14 +78,45 @@ jobs:
               if [ ! -f package.json ]; then
                 npx --yes create-miniverse@latest .
                 npm install
+                # Fix WebSocket URL: use dynamic host instead of hardcoded localhost
+                echo 'import re' > /tmp/fix_ws.py
+                echo 'f = "/opt/miniverse/src/main.ts"' >> /tmp/fix_ws.py
+                echo 'try:' >> /tmp/fix_ws.py
+                echo '    c = open(f).read()' >> /tmp/fix_ws.py
+                echo '    c = re.sub("url:\\s*\\x27ws://[^\\x27]+/ws\\x27", "url: `ws://${window.location.host}/ws`", c)' >> /tmp/fix_ws.py
+                echo '    open(f,"w").write(c); print("WS URL fixed")' >> /tmp/fix_ws.py
+                echo 'except Exception as e: print("WS fix skipped:", e)' >> /tmp/fix_ws.py
+                python3 /tmp/fix_ws.py
               fi
               npm run build
               pm2 start "npm run server -- --port 4322" --name miniverse
             fi
             cd /opt/nitrocircus
 
-            echo "==> Reloading nginx (Miniverse frontend)..."
-            systemctl reload nginx 2>/dev/null || true
+            echo "==> Configuring nginx for Miniverse (port 4321)..."
+            if [ ! -f /etc/nginx/sites-available/miniverse ]; then
+              printf '%s\n' \
+                'server {' \
+                '    listen 4321;' \
+                '    root /opt/miniverse/dist;' \
+                '    index index.html;' \
+                '    location /api/ {' \
+                '        proxy_pass http://localhost:4322;' \
+                '        proxy_http_version 1.1;' \
+                '    }' \
+                '    location /ws {' \
+                '        proxy_pass http://localhost:4322;' \
+                '        proxy_http_version 1.1;' \
+                '        proxy_set_header Upgrade $http_upgrade;' \
+                '        proxy_set_header Connection "upgrade";' \
+                '    }' \
+                '    location / { try_files $uri $uri/ /index.html; }' \
+                '}' > /etc/nginx/sites-available/miniverse
+              ln -sf /etc/nginx/sites-available/miniverse /etc/nginx/sites-enabled/miniverse
+            fi
+            if command -v nginx &>/dev/null; then
+              nginx -t && systemctl reload nginx
+            fi
 
             pm2 save
 
