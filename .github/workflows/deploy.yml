@@ -42,7 +42,8 @@ jobs:
 
             echo "==> Pulling latest code..."
             cd /opt/nitrocircus
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "==> Installing dependencies..."
             npm install
