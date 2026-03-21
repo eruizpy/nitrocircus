@@ -8,7 +8,7 @@ import { projectRoutes } from './routes/projects'
 import { taskRoutes } from './routes/tasks'
 import { commandRoutes } from './routes/commands'
 
-const app = Fastify({ logger: true })
+const app = Fastify({ logger: true, bodyLimit: 4 * 1024 * 1024 })
 
 app.register(healthRoutes)
 app.register(projectRoutes)

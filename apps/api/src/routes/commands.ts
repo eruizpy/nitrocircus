@@ -6,6 +6,7 @@ import { runAgent } from '../services/agent-runner'
 import { getEpic } from '../services/epic'
 import { deliverProject } from '../services/delivery'
 import { queueDeployTask } from '../services/agent-runner'
+import { transcribeAudio } from '../services/transcription'
 
 interface CommandBody {
   type: string
@@ -150,6 +151,13 @@ async function dispatch(
       }
       await queueDeployTask(project, { serverIp, sshUser, sshPass, domain })
       return { queued: true }
+    }
+
+    // ── voice note → transcript ────────────────────────────────
+    case 'audio.transcribe': {
+      const { audioBase64 } = payload as { audioBase64: string }
+      const transcript = await transcribeAudio(audioBase64)
+      return { transcript }
     }
 
     default:

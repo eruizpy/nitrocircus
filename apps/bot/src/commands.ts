@@ -1,5 +1,6 @@
 import type { Context } from 'grammy'
 import type { Project } from '@nitrocircus/shared'
+import { config } from './config'
 
 interface PlanResult {
   summary: string
@@ -17,6 +18,12 @@ import {
   handleConversationInput,
   cancelConversation,
 } from './deploy-conversation'
+import {
+  startVoiceCapture,
+  isAwaitingVoice,
+  consumePending,
+  cancelVoiceCapture,
+} from './new-project-conversation'
 
 type Ctx = Context
 
@@ -50,12 +57,61 @@ export async function cmdNew(ctx: Ctx): Promise<void> {
     return
   }
 
-  const res = await sendCommand<Project>('project.new', { name, description: name }, actorId(ctx))
+  startVoiceCapture(actorId(ctx), name)
+  await ctx.reply(
+    `🎙 <b>${esc(name)}</b>\n\nEnviá una <b>nota de audio</b> describiendo los requerimientos del proyecto.\n\nTambién podés escribirlos como texto.\n\n<i>Usá /cancel para cancelar.</i>`,
+    HTML,
+  )
+}
+
+// ── Voice note handler — transcribes and creates the project ──────────────────
+
+export async function handleVoice(ctx: Ctx): Promise<void> {
+  const userId = actorId(ctx)
+  const pending = consumePending(userId)
+  if (!pending) return // No waiting for voice
+
+  await ctx.reply('🎙 Transcribiendo nota de audio...')
+
+  const voice = ctx.message?.voice
+  if (!voice) return
+
+  // Download voice file from Telegram
+  const fileInfo = await ctx.api.getFile(voice.file_id)
+  const fileUrl = `https://api.telegram.org/file/bot${config.telegramToken}/${fileInfo.file_path}`
+  const audioResponse = await fetch(fileUrl)
+  const audioBase64 = Buffer.from(await audioResponse.arrayBuffer()).toString('base64')
+
+  // Transcribe via API (Groq Whisper)
+  const transcribeRes = await sendCommand<{ transcript: string }>(
+    'audio.transcribe',
+    { audioBase64 },
+    userId,
+  )
+
+  if (!transcribeRes.ok || !transcribeRes.data) {
+    await ctx.reply(`❌ Error al transcribir: ${transcribeRes.error}\n\nEscribí los requerimientos como texto.`)
+    startVoiceCapture(userId, pending.name) // Restore state so they can retry with text
+    return
+  }
+
+  const description = transcribeRes.data.transcript
+  await ctx.reply(`📝 <b>Requerimientos recibidos:</b>\n\n<i>${esc(description)}</i>`, HTML)
+
+  await createProjectWithDescription(ctx, userId, pending.name, description)
+}
+
+async function createProjectWithDescription(
+  ctx: Ctx,
+  userId: string,
+  name: string,
+  description: string,
+): Promise<void> {
+  const res = await sendCommand<Project>('project.new', { name, description }, userId)
   if (!res.ok || !res.data) {
     await ctx.reply(`Error al crear el proyecto: ${res.error}`)
     return
   }
-
   await ctx.reply(
     `Proyecto creado ✅\n\n${formatProject(res.data)}\n\nUsa /plan <code>${res.data.id}</code> para planificarlo.`,
     HTML,
@@ -271,21 +327,35 @@ export async function cmdDeploy(ctx: Ctx): Promise<void> {
   await ctx.reply(prompt, HTML)
 }
 
-// ── /cancel — cancels active deploy conversation ───────────────────────────────
+// ── /cancel — cancels active conversation ─────────────────────────────────────
 
 export async function cmdCancel(ctx: Ctx): Promise<void> {
-  if (isInConversation(actorId(ctx))) {
-    cancelConversation(actorId(ctx))
+  const userId = actorId(ctx)
+  if (isAwaitingVoice(userId)) {
+    cancelVoiceCapture(userId)
+    await ctx.reply('❌ Operación cancelada.')
+  } else if (isInConversation(userId)) {
+    cancelConversation(userId)
     await ctx.reply('❌ Operación cancelada.')
   } else {
     await ctx.reply('No hay ninguna operación activa.')
   }
 }
 
-// ── Message handler — drives deploy multi-step conversation ───────────────────
+// ── Message handler — text fallback for voice capture + deploy conversation ────
 
 export async function handleMessage(ctx: Ctx): Promise<void> {
   const userId = actorId(ctx)
+
+  // Text fallback: user typed requirements instead of sending a voice note
+  if (isAwaitingVoice(userId)) {
+    const pending = consumePending(userId)!
+    const description = ctx.message?.text?.trim() ?? ''
+    if (!description) return
+    await createProjectWithDescription(ctx, userId, pending.name, description)
+    return
+  }
+
   if (!isInConversation(userId)) return
 
   const text = ctx.message?.text ?? ''

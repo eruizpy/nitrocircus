@@ -3,7 +3,7 @@ import { config } from './config'
 import {
   cmdNew, cmdPlan, cmdBoard, cmdStart, cmdStatus,
   cmdApprove, cmdDeliver, cmdDeploy, cmdProjects,
-  cmdCancel, handleMessage,
+  cmdCancel, handleMessage, handleVoice,
 } from './commands'
 
 const bot = new Bot(config.telegramToken)
@@ -31,6 +31,8 @@ bot.command('projects', cmdProjects)
 
 // Drives multi-step conversations (e.g. deploy parameter collection)
 bot.on('message:text', handleMessage)
+// Voice notes → transcribe → create project
+bot.on('message:voice', handleVoice)
 
 bot.command('help', (ctx) =>
   ctx.reply(
