@@ -67,21 +67,23 @@ jobs:
             pm2 restart nitrocircus-agents 2>/dev/null || \
               pm2 start "npm run agents" --name nitrocircus-agents
 
-            echo "==> Starting Miniverse..."
+            echo "==> Starting Miniverse backend (port 4322)..."
             if pm2 describe miniverse > /dev/null 2>&1; then
               pm2 restart miniverse
             else
-              # First run: scaffold + start
               mkdir -p /opt/miniverse
               cd /opt/miniverse
               if [ ! -f package.json ]; then
                 npx --yes create-miniverse@latest .
                 npm install
-                npm run build
               fi
-              pm2 start "npm run server" --name miniverse
+              npm run build
+              pm2 start "npm run server -- --port 4322" --name miniverse
             fi
             cd /opt/nitrocircus
+
+            echo "==> Reloading nginx (Miniverse frontend)..."
+            systemctl reload nginx 2>/dev/null || true
 
             pm2 save
 
