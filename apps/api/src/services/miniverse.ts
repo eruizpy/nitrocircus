@@ -183,3 +183,9 @@ export function emitAgentBlocked(agentType: AgentType, taskTitle?: string): void
     ...(taskTitle ? { task: `Blocked: ${taskTitle}` } : {}),
   }).catch(() => {})
 }
+
+export function emitIdleHeartbeats(): void {
+  for (const [agent, name] of Object.entries(AGENT_NAMES)) {
+    heartbeat({ agent, name, state: 'idle' }).catch(() => {})
+  }
+}

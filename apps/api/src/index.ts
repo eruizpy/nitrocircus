@@ -7,6 +7,7 @@ import { healthRoutes } from './routes/health'
 import { projectRoutes } from './routes/projects'
 import { taskRoutes } from './routes/tasks'
 import { commandRoutes } from './routes/commands'
+import { emitIdleHeartbeats } from './services/miniverse'
 
 const app = Fastify({ logger: true, bodyLimit: 4 * 1024 * 1024 })
 
@@ -23,6 +24,9 @@ const start = async () => {
   app.log.info('Redis connected')
 
   await app.listen({ port: config.port, host: '0.0.0.0' })
+
+  emitIdleHeartbeats()
+  setInterval(emitIdleHeartbeats, 45_000).unref()
 }
 
 const stop = async () => {
