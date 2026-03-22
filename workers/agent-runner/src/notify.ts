@@ -5,15 +5,23 @@ export async function notifyTaskState(
   taskId: string,
   state: 'in_review' | 'blocked',
 ): Promise<void> {
-  await fetch(`${API_URL}/commands`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'task.agent_complete',
-      payload: { taskId, state },
-      actorId: 'agent-runner',
-    }),
-  })
+  try {
+    const res = await fetch(`${API_URL}/commands`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'task.agent_complete',
+        payload: { taskId, state },
+        actorId: 'agent-runner',
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) {
+      console.error(`[notify] API responded ${res.status} for task ${taskId}`)
+    }
+  } catch (err) {
+    console.error(`[notify] Failed to notify state for ${taskId}:`, err instanceof Error ? err.message : err)
+  }
 }
 
 type MiniverseEvent = 'agent.online' | 'agent.thinking' | 'agent.coding' | 'agent.reviewing' | 'agent.blocked' | 'agent.ready'
