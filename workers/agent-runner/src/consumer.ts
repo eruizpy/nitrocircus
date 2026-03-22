@@ -2,13 +2,11 @@ import Redis from 'ioredis'
 import { runAgent } from './runner'
 import type { AgentTask } from './types'
 
-const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-  lazyConnect: true,
-  maxRetriesPerRequest: null,
-})
-
 export async function startConsumer(queue: string): Promise<never> {
-  await redis.connect().catch(() => {}) // already connected if shared
+  // Each consumer needs its own connection — BRPOP is blocking and monopolizes the connection
+  const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+    maxRetriesPerRequest: null,
+  })
 
   console.log(`[consumer] Listening on ${queue}`)
 
