@@ -104,6 +104,16 @@ Resumen del cambio local:
 - Se implemento un ajuste de flujo en la API para que `/deliver` normalice todas las tareas del proyecto a `done` antes de pasar el proyecto a `delivered`.
 - Con ese cambio, la entrega deja el trabajo aceptado como completado y el deploy sigue siendo una accion separada y opcional ejecutable despues de la entrega.
 - Tambien se endurecio `planProject` para que ninguna tarea futura quede sin `assignedAgent`: si el LLM omite o invalida ese campo, NitroCircus infiere `frontend`, `backend` o `devops` por heuristica.
+- El cambio se versiono en `4cdbc01` (`feat(flow): finalize delivered tasks and normalize agent assignment`).
+- El deploy automatico del run `23656112853` fallo durante la exportacion BuildKit del contenedor API (`failed to prepare extraction snapshot ... parent snapshot ... does not exist`).
+- Se recupero produccion manualmente levantando `docker compose` y reiniciando `pm2`, dejando nuevamente la API saludable.
+- Se verifico dentro del contenedor `nitrocircus-api-1` que el codigo cargado en produccion ya incluye `finalizeProjectTasksForDelivery` y la normalizacion `VALID_EXECUTION_AGENTS`.
+- Como `cosito1` ya habia sido entregado antes del cambio, se ejecuto la normalizacion con el mismo servicio del API dentro del contenedor productivo para corregir el estado heredado.
+- Resultado real de esa normalizacion:
+  - las 9 tareas de `cosito1` pasaron de `in_review` a `done` en Mongo
+  - los issues `#114` a `#122` quedaron `CLOSED` con label `status:done`
+  - los items del GitHub Project `NitroCircus` quedaron con `Status=Done`
+- Se valido ademas que no existe ninguna tarea persistida sin `assignedAgent` en la base de produccion (`missingAssignedAgentCount: 0`).
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -127,7 +137,9 @@ Resumen del cambio local:
 - Los `429` de Groq no desaparecieron por completo historicamente, pero dejaron de ser la señal dominante en el ultimo retry medido.
 - Tras agregar soporte de `files[]`, el flujo de fallback quedo mucho mas robusto y la mayoria del proyecto `cosito1` avanzo a `in_review`.
 - El proyecto `cosito1` ya no tiene tareas visibles en `status:blocked` dentro de GitHub issues.
-- Queda pendiente desplegar y validar el nuevo flujo de entrega (`/deliver` => tareas `done`) en produccion.
+- El nuevo flujo de entrega ya quedo validado en produccion: proyecto entregado implica tareas `done`, y `/deploy` sigue siendo opcional y posterior.
+- La base de produccion no tiene tareas sin `assignedAgent`; el endurecimiento de planificacion ya esta alineado con el estado persistido.
+- El repo local sigue limpio en `main...origin/main`.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -155,7 +167,10 @@ Resumen del cambio local:
 20. Confirmar que la rama `feat/cosito1/crear-una-imagen-docker` exista en origin.
 21. Revisar el run `23655292185` y confirmar la reduccion de `quota_exceeded` frente a `patch_apply_failed`.
 22. Revisar el run `23655617175` y confirmar que `cosito1` completo quedo en `status:in_review`.
-23. Tras desplegar este cambio, entregar un proyecto y confirmar que sus tareas pasan a `done` aunque no se ejecute `/deploy`.
+23. Confirmar en produccion que `cosito1` mantiene sus 9 tareas en `done` y el proyecto en `delivered`.
+24. Confirmar en GitHub que `#114` a `#122` figuran `CLOSED` con `status:done`.
+25. Confirmar en GitHub Projects que los items `#114` a `#122` estan en `Done`.
+26. Confirmar en produccion que `missingAssignedAgentCount` sigue siendo `0`.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -165,7 +180,8 @@ Los siguientes pasos exactos recomendados son:
 - validar en GitHub que los issues/tareas de `cosito1` ya promovidos a `in_review` tengan labels/board consistentes
 - siguiente foco tecnico recomendado: endurecer el contrato de salida del fallback OpenAI-compatible para forzar patches validos o introducir una etapa de saneamiento antes de `git apply`
 - siguiente foco operativo recomendado: revisar PRs/ramas generadas y preparar la etapa de aprobacion/revision de las tareas en `in_review`
-- siguiente foco operativo recomendado: desplegar este ajuste, validar `/deliver` sobre `cosito1` y confirmar que futuros `/plan` sigan generando tareas con agente asignado siempre
+- siguiente foco operativo recomendado: crear un nuevo proyecto de prueba y recorrer `/new` -> `/plan` -> `/start` -> `/deliver` para validar el flujo completo sobre datos nacidos ya con esta version
+- siguiente foco tecnico recomendado: revisar la causa de corrupcion BuildKit del run `23656112853` para evitar que un deploy fallido vuelva a requerir recuperacion manual
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
