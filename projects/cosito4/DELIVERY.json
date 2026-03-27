@@ -1,0 +1,83 @@
+{
+  "projectId": "69c703f685b7aae6d8717d85",
+  "projectName": "cosito4",
+  "slug": "cosito4",
+  "deliveredAt": "2026-03-27T22:29:44.235Z",
+  "epicCount": 2,
+  "taskCount": 3,
+  "archiveName": "cosito4.zip",
+  "sourceRef": "main",
+  "warnings": [
+    "No se pudo exportar la branch feat/cosito4/implementacion-de-la-funcionalidad-de-contacto-a-t: GitHub archive feat/cosito4/implementacion-de-la-funcionalidad-de-contacto-a-t -> 404: 404: Not Found",
+    "No se pudo exportar la branch feat/cosito4/crear-un-archivo-de-configuracion-para-la-ejecucio: GitHub archive feat/cosito4/crear-un-archivo-de-configuracion-para-la-ejecucio -> 404: 404: Not Found"
+  ],
+  "artifacts": [
+    {
+      "kind": "base",
+      "ref": "main",
+      "title": "Snapshot base main",
+      "outputDir": "source/main",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito4/diseno-de-la-interfaz-de-usuario",
+      "title": "Diseño de la interfaz de usuario",
+      "agent": "frontend",
+      "issueNumber": 127,
+      "outputDir": "task-branches/feat__cosito4__diseno-de-la-interfaz-de-usuario",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito4/implementacion-de-la-funcionalidad-de-contacto-a-t",
+      "title": "Implementación de la funcionalidad de contacto a través de WhatsApp",
+      "agent": "frontend",
+      "issueNumber": 128,
+      "outputDir": "task-branches/feat__cosito4__implementacion-de-la-funcionalidad-de-contacto-a-t",
+      "status": "failed",
+      "warning": "GitHub archive feat/cosito4/implementacion-de-la-funcionalidad-de-contacto-a-t -> 404: 404: Not Found"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito4/crear-un-archivo-de-configuracion-para-la-ejecucio",
+      "title": "Crear un archivo de configuración para la ejecución local",
+      "agent": "devops",
+      "issueNumber": 129,
+      "outputDir": "task-branches/feat__cosito4__crear-un-archivo-de-configuracion-para-la-ejecucio",
+      "status": "failed",
+      "warning": "GitHub archive feat/cosito4/crear-un-archivo-de-configuracion-para-la-ejecucio -> 404: 404: Not Found"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "69c7041885b7aae6d8717d88",
+      "title": "Diseño de la interfaz de usuario",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito4/diseno-de-la-interfaz-de-usuario",
+      "issue": 127
+    },
+    {
+      "id": "69c7041985b7aae6d8717d8d",
+      "title": "Implementación de la funcionalidad de contacto a través de WhatsApp",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito4/implementacion-de-la-funcionalidad-de-contacto-a-t",
+      "issue": 128
+    },
+    {
+      "id": "69c7041985b7aae6d8717d93",
+      "title": "Crear un archivo de configuración para la ejecución local",
+      "state": "done",
+      "agent": "devops",
+      "branch": "feat/cosito4/crear-un-archivo-de-configuracion-para-la-ejecucio",
+      "issue": 129
+    }
+  ],
+  "gitPublish": {
+    "published": false,
+    "files": [],
+    "commitMessage": ""
+  }
+}
