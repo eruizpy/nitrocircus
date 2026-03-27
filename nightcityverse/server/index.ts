@@ -16,7 +16,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const IS_DEV    = process.env.NODE_ENV !== 'production'
-const PORT      = Number(process.env.MINIVERSE_PORT ?? 4321)
+const PORT      = Number(process.env.NIGHTCITYVERSE_PORT ?? process.env.MINIVERSE_PORT ?? 4321)
 
 // ── HTTP Server ───────────────────────────────────────────────────────────────
 

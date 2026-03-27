@@ -1,5 +1,7 @@
 # NightCityVerse Integration
 
+NightCityVerse now lives as a standalone project under `nightcityverse/` and should be treated as an external visual runtime consumed by NitroCircus over HTTP/WebSocket.
+
 ## Objetivo
 Usar NightCityVerse como capa visual y social para observar agentes trabajando.
 

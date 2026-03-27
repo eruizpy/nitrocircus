@@ -51,3 +51,12 @@ NightCityVerse no es el orquestador central.
 
 **Motivo**  
 La lógica de negocio y la auditoría deben residir en el backend.
+
+---
+
+## ADR-007 — NightCityVerse se desacopla como proyecto independiente
+**Decisión**
+NightCityVerse deja de vivir como aplicación interna de despliegue del stack principal y pasa a mantenerse como proyecto standalone dentro del workspace `nightcityverse/`, con workflow de deploy propio y consumo por HTTP desde NitroCircus.
+
+**Motivo**
+Reducir acoplamiento entre la capa visual y el orquestador principal, permitir releases independientes y evitar que un deploy de NitroCircus reconfigure o rompa el runtime visual.

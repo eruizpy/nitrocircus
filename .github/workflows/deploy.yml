@@ -54,9 +54,7 @@ jobs:
             ufw allow 80/tcp    > /dev/null 2>&1 || true
             ufw allow 443/tcp   > /dev/null 2>&1 || true
             ufw allow 3001/tcp  > /dev/null 2>&1 || true
-            ufw allow 4321/tcp  > /dev/null 2>&1 || true
             ufw deny 3000/tcp   > /dev/null 2>&1 || true
-            ufw deny 4322/tcp   > /dev/null 2>&1 || true
             ufw deny 27017/tcp  > /dev/null 2>&1 || true
             ufw deny 6379/tcp   > /dev/null 2>&1 || true
             ufw --force enable  > /dev/null 2>&1 || true
@@ -88,54 +86,6 @@ jobs:
             export ORCHESTRATOR_URL=http://127.0.0.1:3000
             pm2 delete nitrocircus-agents 2>/dev/null || true
             pm2 start "cd /opt/nitrocircus-runner && npm run start --workspace=workers/agent-runner" --name nitrocircus-agents
-
-            echo "==> Starting NightCityVerse backend (port 4322)..."
-            cd /opt/nitrocircus
-            npm run build --workspace=apps/miniverse
-            pm2 delete miniverse 2>/dev/null || true
-            pm2 delete nightcityverse 2>/dev/null || true
-            pm2 start "cd /opt/nitrocircus && NODE_ENV=production MINIVERSE_PORT=4322 npm run start --workspace=apps/miniverse" --name nightcityverse
-            cd /opt/nitrocircus
-
-            echo "==> Configuring nginx for NightCityVerse (port 4321)..."
-            rm -f /etc/nginx/sites-enabled/miniverse /etc/nginx/sites-available/miniverse
-            printf '%s\n' \
-              'server {' \
-              '    listen 4321;' \
-              '    root /opt/nitrocircus/apps/miniverse/dist;' \
-              '    index index.html;' \
-              '' \
-              '    location /api/ {' \
-              '        proxy_pass http://localhost:4322;' \
-              '        proxy_http_version 1.1;' \
-              '    }' \
-              '' \
-              '    location /ws {' \
-              '        proxy_pass http://localhost:4322;' \
-              '        proxy_http_version 1.1;' \
-              '        proxy_set_header Upgrade $http_upgrade;' \
-              '        proxy_set_header Connection "upgrade";' \
-              '    }' \
-              '' \
-              '    location /assets/ {' \
-              '        try_files $uri =404;' \
-              '        add_header Cache-Control "public, max-age=31536000, immutable";' \
-              '    }' \
-              '' \
-              '    location = /index.html {' \
-              '        add_header Cache-Control "no-store, no-cache, must-revalidate";' \
-              '        try_files /index.html =404;' \
-              '    }' \
-              '' \
-              '    location / {' \
-              '        add_header Cache-Control "no-store, no-cache, must-revalidate";' \
-              '        try_files $uri $uri/ /index.html;' \
-              '    }' \
-              '}' > /etc/nginx/sites-available/nightcityverse
-            ln -sf /etc/nginx/sites-available/nightcityverse /etc/nginx/sites-enabled/nightcityverse
-            if command -v nginx &>/dev/null; then
-              nginx -t && systemctl reload nginx
-            fi
 
             pm2 save
 

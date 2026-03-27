@@ -7,7 +7,7 @@ import { healthRoutes } from './routes/health'
 import { projectRoutes } from './routes/projects'
 import { taskRoutes } from './routes/tasks'
 import { commandRoutes } from './routes/commands'
-import { emitIdleHeartbeats } from './services/miniverse'
+import { emitIdleHeartbeats } from './services/nightcityverse'
 
 const app = Fastify({ logger: true, bodyLimit: 4 * 1024 * 1024 })
 

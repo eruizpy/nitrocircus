@@ -5,7 +5,8 @@
  * NightCityVerse runs as a host-level visual service on port 4321.
  * The API container reaches it via host.docker.internal.
  *
- * Configure via MINIVERSE_URL env var (default: http://host.docker.internal:4321).
+ * Configure via NIGHTCITYVERSE_URL env var (default: http://host.docker.internal:4321).
+ * MINIVERSE_URL remains as a temporary compatibility fallback.
  * If not set, all events are silently dropped — NightCityVerse is non-critical.
  */
 
@@ -40,7 +41,7 @@ const AGENT_NAMES: Record<string, string> = {
 // ── Transport ─────────────────────────────────────────────────────────────────
 
 function getBase(): string | null {
-  return process.env.MINIVERSE_URL ?? null
+  return process.env.NIGHTCITYVERSE_URL ?? process.env.MINIVERSE_URL ?? null
 }
 
 interface HeartbeatPayload {

@@ -1,5 +1,5 @@
 const API_URL = process.env.ORCHESTRATOR_URL ?? 'http://127.0.0.1:3000'
-const MINIVERSE_URL = process.env.MINIVERSE_URL ?? null
+const NIGHTCITYVERSE_URL = process.env.NIGHTCITYVERSE_URL ?? process.env.MINIVERSE_URL ?? null
 const MAX_NOTIFY_ATTEMPTS = 3
 const RETRY_DELAY_MS = 1_500
 
@@ -51,7 +51,7 @@ export async function notifyTaskState(
   throw new Error(`Unable to persist task ${taskId} -> ${state} after ${MAX_NOTIFY_ATTEMPTS} attempts`)
 }
 
-type MiniverseEvent = 'agent.online' | 'agent.thinking' | 'agent.coding' | 'agent.reviewing' | 'agent.blocked' | 'agent.ready'
+type NightCityVerseEvent = 'agent.online' | 'agent.thinking' | 'agent.coding' | 'agent.reviewing' | 'agent.blocked' | 'agent.ready'
 
 const AGENT_NAMES: Record<string, string> = {
   frontend: 'Frontend Agent',
@@ -60,7 +60,7 @@ const AGENT_NAMES: Record<string, string> = {
   pm:       'PM Agent',
 }
 
-const EVENT_TO_STATE: Record<MiniverseEvent, string> = {
+const EVENT_TO_STATE: Record<NightCityVerseEvent, string> = {
   'agent.online':    'idle',
   'agent.thinking':  'thinking',
   'agent.coding':    'working',
@@ -69,16 +69,16 @@ const EVENT_TO_STATE: Record<MiniverseEvent, string> = {
   'agent.ready':     'idle',
 }
 
-export function emitMiniverse(
-  event: MiniverseEvent,
+export function emitNightCityVerse(
+  event: NightCityVerseEvent,
   agentType: string,
   projectName?: string,
   taskTitle?: string,
 ): void {
-  if (!MINIVERSE_URL) return
+  if (!NIGHTCITYVERSE_URL) return
   const state = EVENT_TO_STATE[event]
   const task = taskTitle ?? (projectName ? `Project: ${projectName}` : undefined)
-  fetch(`${MINIVERSE_URL}/api/heartbeat`, {
+  fetch(`${NIGHTCITYVERSE_URL}/api/heartbeat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

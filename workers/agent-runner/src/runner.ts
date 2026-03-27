@@ -2,7 +2,7 @@ import { execSync } from 'child_process'
 import path from 'path'
 import type { AgentTask } from './types'
 import { AGENT_CONFIGS } from './agents'
-import { notifyTaskState, emitMiniverse } from './notify'
+import { notifyTaskState, emitNightCityVerse } from './notify'
 import {
   getPrimaryProvider,
   getFallbackProvider,
@@ -31,11 +31,11 @@ export async function runAgent(task: AgentTask): Promise<void> {
     : buildPrompt(task, config.allowedPaths)
 
   console.log(`[runner] Starting ${task.agentType} agent for task ${task.taskId}`)
-  emitMiniverse('agent.online', task.agentType, task.projectName, task.title)
+  emitNightCityVerse('agent.online', task.agentType, task.projectName, task.title)
 
   try {
-    emitMiniverse('agent.thinking', task.agentType, task.projectName, task.title)
-    emitMiniverse('agent.coding', task.agentType, task.projectName, task.title)
+    emitNightCityVerse('agent.thinking', task.agentType, task.projectName, task.title)
+    emitNightCityVerse('agent.coding', task.agentType, task.projectName, task.title)
     const primaryProvider = getPrimaryProvider()
     let result = await runWithProvider(primaryProvider, task, prompt, config)
 
@@ -63,7 +63,7 @@ export async function runAgent(task: AgentTask): Promise<void> {
         console.warn('[runner] Git push warning:', String(gitErr).slice(0, 200))
       }
 
-      emitMiniverse('agent.reviewing', task.agentType, task.projectName, task.title)
+      emitNightCityVerse('agent.reviewing', task.agentType, task.projectName, task.title)
       await notifyTaskState(task.taskId, 'in_review', {
         provider: result.provider,
         summary: result.summary,
@@ -74,7 +74,7 @@ export async function runAgent(task: AgentTask): Promise<void> {
       const code = result.failure?.code ?? 'unknown'
       const provider = result.failure?.provider ?? primaryProvider
       console.error(`[runner] Agent reported failure [${provider}:${code}]: ${message}`)
-      emitMiniverse('agent.blocked', task.agentType, task.projectName, task.title)
+      emitNightCityVerse('agent.blocked', task.agentType, task.projectName, task.title)
       await notifyTaskState(task.taskId, 'blocked', {
         provider,
         code,
@@ -83,7 +83,7 @@ export async function runAgent(task: AgentTask): Promise<void> {
     }
   } catch (err) {
     console.error(`[runner] Unexpected error for ${task.taskId}:`, err)
-    emitMiniverse('agent.blocked', task.agentType, task.projectName, task.title)
+    emitNightCityVerse('agent.blocked', task.agentType, task.projectName, task.title)
     await notifyTaskState(task.taskId, 'blocked', {
       provider: getPrimaryProvider(),
       code: 'unknown',

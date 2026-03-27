@@ -28,9 +28,15 @@ Resumen del cambio local:
 - `.claude/` no parece ser fuente de verdad del proyecto; tratarla como artefacto auxiliar salvo evidencia contraria.
 
 ## Lo hecho en esta sesion
+- Se extrajo la capa visual a un workspace standalone `nightcityverse/`, fuera de `apps/`, para empezar el desacople real respecto de NitroCircus.
+- NitroCircus quedo con un adaptador HTTP a NightCityVerse (`apps/api/src/services/nightcityverse.ts`) y ahora prioriza `NIGHTCITYVERSE_URL`, manteniendo `MINIVERSE_URL` solo como compatibilidad temporal.
+- El `agent-runner` tambien paso a usar `NIGHTCITYVERSE_URL` como variable principal de integracion visual.
+- El workflow principal `deploy.yml` dejo de construir y arrancar NightCityVerse.
+- Se agrego un workflow separado `deploy-nightcityverse.yml` para desplegar el proyecto visual de forma independiente en `/opt/nightcityverse`.
+- Se agregaron `nightcityverse/README.md` y `nightcityverse/.env.example` como base del proyecto standalone.
 - Se corrigio el riesgo de frontend desalineado en NightCityVerse: el deploy ahora reescribe siempre la configuracion nginx del puerto `4321` en vez de dejarla congelada si ya existia.
 - Nginx ahora sirve `index.html` y las rutas SPA con `Cache-Control: no-store, no-cache, must-revalidate`, mientras que `/assets/` queda con cache inmutable para los bundles hasheados.
-- Se agregaron meta tags `no-cache` y una marca visible `build: live` en `apps/miniverse/index.html` para detectar rapidamente si el navegador esta mostrando una version vieja.
+- Se agregaron meta tags `no-cache` y una marca visible `build: live` en `nightcityverse/index.html` para detectar rapidamente si el navegador esta mostrando una version vieja.
 - Se reconstruyo el estado del proyecto usando la evidencia real del repo.
 - Se identifico la ausencia de la capa `.ai/` como principal riesgo de continuidad.
 - Se creo la carpeta `.ai/` con memoria de proyecto, decisiones operativas y este handoff.
@@ -189,10 +195,10 @@ Resumen del cambio local:
   - alcance: contexto del sistema, arquitectura runtime, flujo operativo, entrega/despliegue, maquinas de estado e integraciones/limites de confianza
 - Se consolido la migracion de la capa visual del repo:
   - el producto visible pasa a llamarse `NightCityVerse`
-  - `apps/miniverse` se mantiene como ruta tecnica por compatibilidad interna
+  - inicialmente `apps/miniverse` se mantuvo por compatibilidad, pero en esta sesion se extrajo a `nightcityverse/`
   - el editor del mundo ya no depende de un endpoint `claude` fijo; usa seleccion de provider y `POST /api/edit`
   - los providers soportados para el editor visual pasan a ser `anthropic`, `openai` y `ollama`
-  - el workflow de deploy deja de recrear un Miniverse externo y pasa a desplegar el modulo `apps/miniverse` del propio repo como proceso `nightcityverse`
+  - ahora `NightCityVerse` tiene workflow propio de despliegue y NitroCircus solo conserva el adaptador HTTP
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

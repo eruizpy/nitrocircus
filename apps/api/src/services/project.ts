@@ -3,7 +3,7 @@ import type { Project, ProjectState, ActorType } from '@nitrocircus/shared'
 import { assertProjectTransition } from '@nitrocircus/shared'
 import { collections, type ProjectDoc } from '../db/collections'
 import { logEvent } from './event-log'
-import { emitProjectEvent } from './miniverse'
+import { emitProjectEvent } from './nightcityverse'
 
 function toProject(doc: ProjectDoc): Project {
   const { _id, ...rest } = doc

@@ -4,7 +4,7 @@ import { assertTaskTransition } from '@nitrocircus/shared'
 import { collections, type TaskDoc } from '../db/collections'
 import { logEvent } from './event-log'
 import { syncTaskIssueState } from './github'
-import { emitTaskEvent } from './miniverse'
+import { emitTaskEvent } from './nightcityverse'
 
 // States worth syncing to GitHub (skip rapid planning transitions)
 const GITHUB_SYNC_STATES = new Set<TaskState>(['in_progress', 'blocked', 'in_review', 'done', 'delivered'])
