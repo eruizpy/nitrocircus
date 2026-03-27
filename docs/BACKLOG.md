@@ -138,6 +138,18 @@ Definir qué datos jamás se publican visualmente.
 
 ---
 
+## Epic 11 — Entrega y sincronización local
+### T34
+Automatizar el versionado del bundle en `/projects/<name>` al entregar un proyecto y dejar lista la sincronización del checkout local del operador.
+
+**Aceptación**
+- al ejecutar `/deliver`, el bundle final queda actualizado dentro de `/projects/<name>/`
+- el bundle queda preparado para versionarse en Git sin pasos manuales ambiguos
+- la documentación operativa deja explícito que el checkout local del equipo requiere `git pull` o un agente local para reflejar el cambio automáticamente
+- la ausencia de una sincronización local automática no bloquea la entrega ni el deploy bajo demanda
+
+---
+
 ## Orden recomendado de ejecución
 1. T1–T2
 2. T3–T6

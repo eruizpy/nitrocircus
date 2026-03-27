@@ -75,3 +75,8 @@
 - Decision: los artefactos finales generados en `projects/<slug>/` dejan de considerarse solo persistencia local/produccion y pasan a ser parte versionada del monorepo.
 - Motivo: el estado anterior hacia que un proyecto pudiera existir en produccion pero no en el checkout local del equipo, rompiendo continuidad y auditoria del entregable real.
 - Alcance: al regenerar o entregar un proyecto, su carpeta en `projects/` debe poder traerse al repo local y commitearse. El despliegue sigue siendo opcional y posterior.
+
+## ADR-017 - La sincronizacion del checkout local no se asume desde produccion
+- Decision: el flujo de entrega debe dejar el bundle listo para versionarse en Git, pero no debe asumir que puede actualizar automaticamente el checkout local del operador desde el servidor.
+- Motivo: la entrega puede automatizar la generacion y publicacion del bundle, pero la copia efectiva al equipo del usuario requiere `git pull` o un proceso local con permisos sobre esa maquina.
+- Alcance: se registra como tarea operativa mejorar la sincronizacion local, pero la falta de ese paso no debe bloquear `done`, `delivered` ni el deploy opcional posterior.

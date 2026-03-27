@@ -170,6 +170,7 @@ Resumen del cambio local:
   - se copio `projects/cosito2/` desde produccion al workspace local
   - el bundle local incluye `README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example`, `DELIVERY.json` y `cosito2.zip`
   - se formalizo la regla de que `projects/<slug>/` tambien debe versionarse en Git para que el equipo vea localmente el entregable real
+  - queda abierta una tarea explicita para automatizar mejor esta sincronizacion al momento de entrega, sabiendo que la copia al checkout local del operador requiere `git pull` o un agente local y no puede forzarse desde produccion por si sola
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

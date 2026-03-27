@@ -40,6 +40,12 @@ Solo cuando el Product Owner lo ordene, el DevOps Agent debe:
 4. configurar GitHub Actions;
 5. solicitar datos de infraestructura.
 
+## Regla de sincronización local
+- Al quedar un proyecto entregado, el bundle en `/projects/<nombre-del-proyecto>/` debe quedar listo para versionarse en Git.
+- Eso garantiza que el entregable pueda llegar a cualquier clon del repositorio.
+- El checkout local del operador no puede actualizarse mágicamente desde producción: requiere `git pull` o un proceso/agente local de sincronización.
+- Esa sincronización local es deseable, pero no debe convertirse en un stopper de la entrega.
+
 ## Datos que debe solicitar DevOps
 - IP pública de la nueva VPS
 - usuario de acceso
