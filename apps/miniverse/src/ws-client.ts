@@ -1,4 +1,4 @@
-// WebSocket client — connects to Miniverse server and syncs world state
+// WebSocket client — connects to NightCityVerse server and syncs world state
 
 import type { AgentData, AnimState } from './npc.js'
 import { triggerPulse, syncBubbles } from './effects.js'
@@ -7,6 +7,10 @@ export interface WorldState {
   tilemap: number[][]
   agents:  Record<string, AgentData>
   updatedAt: number
+}
+
+interface ProviderEventDetail {
+  active: 'anthropic' | 'openai' | 'ollama'
 }
 
 type WorldUpdateCallback = (world: WorldState) => void
@@ -47,6 +51,8 @@ function connect(): void {
       const msg = JSON.parse(evt.data as string) as {
         type: string
         world?: WorldState
+        provider?: ProviderEventDetail['active']
+        active?: ProviderEventDetail['active']
         agent?: string
         name?: string
         state?: AnimState
@@ -60,6 +66,19 @@ function connect(): void {
           if (msg.world) {
             world = msg.world
             onUpdate(world)
+          }
+          if (msg.provider) {
+            window.dispatchEvent(new CustomEvent<ProviderEventDetail>('nightcityverse:provider', {
+              detail: { active: msg.provider },
+            }))
+          }
+          break
+
+        case 'provider':
+          if (msg.active) {
+            window.dispatchEvent(new CustomEvent<ProviderEventDetail>('nightcityverse:provider', {
+              detail: { active: msg.active },
+            }))
           }
           break
 

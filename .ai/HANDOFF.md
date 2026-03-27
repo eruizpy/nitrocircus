@@ -184,6 +184,12 @@ Resumen del cambio local:
   - indice: `docs/PLANTUML_ARCHITECTURE_AND_OPERATIONS.md`
   - diagramas: `docs/plantuml/00_system_context.puml` a `docs/plantuml/05_integrations_and_boundaries.puml`
   - alcance: contexto del sistema, arquitectura runtime, flujo operativo, entrega/despliegue, maquinas de estado e integraciones/limites de confianza
+- Se consolido la migracion de la capa visual del repo:
+  - el producto visible pasa a llamarse `NightCityVerse`
+  - `apps/miniverse` se mantiene como ruta tecnica por compatibilidad interna
+  - el editor del mundo ya no depende de un endpoint `claude` fijo; usa seleccion de provider y `POST /api/edit`
+  - los providers soportados para el editor visual pasan a ser `anthropic`, `openai` y `ollama`
+  - el workflow de deploy deja de recrear un Miniverse externo y pasa a desplegar el modulo `apps/miniverse` del propio repo como proceso `nightcityverse`
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

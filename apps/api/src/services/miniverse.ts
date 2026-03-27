@@ -1,21 +1,21 @@
 /**
- * Miniverse Adapter — https://www.minivrs.com
+ * NightCityVerse Adapter
  *
- * Translates NitroCircus internal events into Miniverse citizen states.
- * Miniverse runs as a PM2 process on the host (port 4321).
+ * Translates NitroCircus internal events into NightCityVerse citizen states.
+ * NightCityVerse runs as a host-level visual service on port 4321.
  * The API container reaches it via host.docker.internal.
  *
  * Configure via MINIVERSE_URL env var (default: http://host.docker.internal:4321).
- * If not set, all events are silently dropped — Miniverse is non-critical.
+ * If not set, all events are silently dropped — NightCityVerse is non-critical.
  */
 
 import type { TaskState, ProjectState, AgentType } from '@nitrocircus/shared'
 
-// ── Miniverse state mapping ───────────────────────────────────────────────────
+// ── NightCityVerse state mapping ─────────────────────────────────────────────
 
-type MiniverseState = 'working' | 'idle' | 'thinking' | 'sleeping' | 'error' | 'offline'
+type NightCityVerseState = 'working' | 'idle' | 'thinking' | 'sleeping' | 'error' | 'offline'
 
-const TASK_STATE_TO_MINIVERSE: Partial<Record<TaskState, MiniverseState>> = {
+const TASK_STATE_TO_NIGHTCITYVERSE: Partial<Record<TaskState, NightCityVerseState>> = {
   in_progress:             'working',
   blocked:                 'error',
   in_review:               'working',
@@ -46,7 +46,7 @@ function getBase(): string | null {
 interface HeartbeatPayload {
   agent: string
   name: string
-  state: MiniverseState
+  state: NightCityVerseState
   task?: string
   energy?: number
 }
@@ -56,7 +56,7 @@ interface ActPayload {
   action: {
     type: 'speak' | 'move' | 'message' | 'status' | 'emote'
     message?: string
-    state?: MiniverseState
+    state?: NightCityVerseState
   }
 }
 
@@ -101,8 +101,8 @@ export function emitTaskEvent(opts: {
   const { state, agentType, taskTitle } = opts
   if (!agentType || agentType === 'pm') return
 
-  const miniverseState = TASK_STATE_TO_MINIVERSE[state]
-  if (!miniverseState) return
+  const visualState = TASK_STATE_TO_NIGHTCITYVERSE[state]
+  if (!visualState) return
 
   const label = TASK_STATE_LABEL[state]
   const task = label
@@ -112,7 +112,7 @@ export function emitTaskEvent(opts: {
   heartbeat({
     agent: agentType,
     name: AGENT_NAMES[agentType] ?? agentType,
-    state: miniverseState,
+    state: visualState,
     ...(task ? { task } : {}),
   }).catch(() => {})
 }

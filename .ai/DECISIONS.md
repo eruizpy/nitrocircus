@@ -22,8 +22,8 @@
 - Decision: DevOps actua solo con instruccion explicita del Product Owner.
 - Evidencia base: `docs/DECISIONS.md`.
 
-### ADR-006 - Miniverse como capa visual
-- Decision: Miniverse no es el orquestador central.
+### ADR-006 - NightCityVerse como capa visual
+- Decision: NightCityVerse no es el orquestador central.
 - Evidencia base: `docs/DECISIONS.md`.
 
 ## ADR-007 - `.ai/` como capa de continuidad operativa entre sesiones
@@ -85,3 +85,8 @@
 - Decision: al entregar un proyecto, NitroCircus debe intentar publicar automaticamente en GitHub el bundle superior de `projects/<slug>/`: `README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example`, `DELIVERY.json` y `<slug>.zip`.
 - Motivo: esto mantiene el repo central actualizado con el entregable real sin depender de una copia manual posterior desde produccion ni de subir por API miles de archivos internos del snapshot expandido.
 - Alcance: la publicacion es best-effort. Si GitHub no esta configurado o falla el update, la entrega sigue completando y el error queda reflejado en `DELIVERY.json` y en eventos del proyecto.
+
+## ADR-019 - La capa visual se consolida como NightCityVerse con editor multi-provider
+- Decision: el modulo visual del repositorio pasa a presentarse como `NightCityVerse`. La ruta tecnica `apps/miniverse` y la variable `MINIVERSE_URL` se mantienen temporalmente por compatibilidad, pero el producto visible, el proceso desplegado y la documentacion operativa deben converger a `NightCityVerse`. Su editor visual soporta seleccion runtime de provider entre `anthropic`, `openai` y `ollama`.
+- Motivo: habia una migracion incompleta con branding mezclado (`Miniverse` y `NightCityVerse`), un endpoint viejo `/api/claude` y una abstraccion de providers a medio cerrar. Consolidarlo evita deriva de producto y deja la capa visual alineada con el resto del sistema.
+- Alcance: el workflow de deploy ya no debe recrear un servicio externo generado por `create-miniverse`; debe desplegar el modulo visual versionado en este repo. La compatibilidad nominal residual (`apps/miniverse`, `MINIVERSE_URL`) se conserva mientras no se haga un rename tecnico mayor.

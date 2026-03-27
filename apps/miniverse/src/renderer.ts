@@ -23,10 +23,10 @@ function render(now: number): void {
     // Loading screen
     ctx.fillStyle = '#0d0d1a'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = '#FFD600'
+    ctx.fillStyle = '#00d4ff'
     ctx.font      = 'bold 14px Courier New'
     ctx.textAlign = 'center'
-    ctx.fillText('⚡ Connecting to Miniverse…', canvas.width / 2, canvas.height / 2)
+    ctx.fillText('⚡ Connecting to NightCityVerse…', canvas.width / 2, canvas.height / 2)
     return
   }
 

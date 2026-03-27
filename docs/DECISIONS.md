@@ -45,9 +45,9 @@ Evitar despliegues prematuros y reducir riesgo.
 
 ---
 
-## ADR-006 — Miniverse como capa visual
+## ADR-006 — NightCityVerse como capa visual
 **Decisión**  
-Miniverse no es el orquestador central.
+NightCityVerse no es el orquestador central.
 
 **Motivo**  
 La lógica de negocio y la auditoría deben residir en el backend.

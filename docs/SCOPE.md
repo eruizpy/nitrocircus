@@ -12,7 +12,7 @@
 - Reportes por Telegram
 - Entrega de proyectos finalizados dentro del monorepo
 - Preparación de despliegue bajo demanda
-- Visualización operativa en Miniverse
+- Visualización operativa en NightCityVerse
 
 ### Excluido en fase inicial
 - Producción automática
@@ -27,7 +27,7 @@
 - No se inicia desarrollo sin autorización del Product Owner
 - No se despliega sin instrucción explícita
 - Las credenciales no deben persistirse en texto plano
-- Miniverse no será la fuente de verdad del sistema
+- NightCityVerse no será la fuente de verdad del sistema
 
 ## Entregables esperados del sistema
 - backlog estructurado,

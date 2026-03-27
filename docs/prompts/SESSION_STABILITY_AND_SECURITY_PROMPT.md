@@ -16,7 +16,7 @@ La arquitectura real del proyecto es:
 - **Redis** para colas
 - **agent-runner** en host para ejecución técnica
 - **GitHub Issues / Projects** como fuente de verdad del trabajo visible
-- **Miniverse** como visualización opcional, no crítica
+- **NightCityVerse** como visualización opcional, no crítica
 
 ## STACK REAL
 

@@ -31,6 +31,6 @@ Cada agente debe operar con:
 - rutas permitidas,
 - formato de salida controlado.
 
-## Miniverse
+## NightCityVerse
 No debe mostrar secretos ni datos internos sensibles.  
 Usar mundo privado cuando aplique.

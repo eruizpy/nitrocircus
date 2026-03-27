@@ -20,7 +20,7 @@ rectangle "Controlled Execution Boundary" {
 cloud "GitHub API / Actions" as GH
 cloud "Telegram Bot API" as TG
 cloud "LLM Providers" as LLM
-rectangle "Miniverse" as MV
+rectangle "NightCityVerse" as MV
 cloud "External Integrations\n(e.g. WhatsApp, others)" as EXT
 
 BOT --> TG : bot messages

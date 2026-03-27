@@ -33,7 +33,7 @@
 - bootstrap en Linode
 - guía de rollback
 
-## Fase 5 — Miniverse
+## Fase 5 — NightCityVerse
 - presencia de agentes
 - estados visuales
 - canales internos

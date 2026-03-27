@@ -8,7 +8,7 @@ NitroCircus se divide en cinco capas:
 2. **Orquestación** — Orchestrator API
 3. **Ejecución por agentes** — PM Agent (Groq) + Execution Agents (Claude Code SDK)
 4. **Persistencia y cola** — MongoDB + Redis
-5. **Visualización** — Miniverse (no crítico)
+5. **Visualización** — NightCityVerse (no crítico)
 
 ---
 
@@ -66,8 +66,8 @@ Gestiona:
 - EventLog (audit trail de cada transición)
 - AgentRun (registro de ejecuciones)
 
-### 8. Miniverse Adapter (pendiente)
-Sincroniza estados hacia Miniverse para visualización social.
+### 8. NightCityVerse Adapter (pendiente)
+Sincroniza estados hacia NightCityVerse para visualización social.
 
 ---
 

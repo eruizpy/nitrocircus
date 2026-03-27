@@ -33,7 +33,7 @@ Este paquete resume la arquitectura, el flujo operativo y las integraciones real
 - `agent-runner` corre en host y no debe contaminar el checkout productivo
 - `/deliver` no implica deploy
 - los bundles en `projects/<slug>/` se versionan en Git
-- Miniverse es observabilidad visual, no orquestación
+- NightCityVerse es observabilidad visual, no orquestación
 
 ## Cómo visualizar
 
@@ -54,4 +54,3 @@ Estos diagramas documentan el estado real actual del proyecto según:
 - `docs/MINIVERSE_INTEGRATION.md`
 - `packages/shared/src/state-machine.ts`
 - `.ai/DECISIONS.md`
-

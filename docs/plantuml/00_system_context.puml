@@ -13,13 +13,13 @@ package "NitroCircus Platform" {
   rectangle "Orchestrator API\n(Fastify)" as API
   rectangle "PM Agent" as PM
   rectangle "Agent Runner" as RUNNER
-  rectangle "Miniverse Adapter" as MVAD
+  rectangle "NightCityVerse Adapter" as MVAD
 }
 
 cloud "GitHub\nIssues / Projects / PRs / Actions" as GH
 database "MongoDB\nProjects / Epics / Tasks / EventLog / AgentRun" as MONGO
 queue "Redis\nQueues / Locks" as REDIS
-rectangle "Miniverse" as MINIVERSE
+rectangle "NightCityVerse" as MINIVERSE
 cloud "LLM Providers\nGroq / Claude / OpenAI-compatible" as LLM
 
 PO --> TG : comandos y aprobaciones
@@ -49,4 +49,3 @@ No es storage, cola ni sistema de aprobación.
 end note
 
 @enduml
-

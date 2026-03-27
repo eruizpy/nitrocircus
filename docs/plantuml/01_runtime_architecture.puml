@@ -31,7 +31,7 @@ node "VPS / Host" {
 cloud "GitHub" as GH
 cloud "Telegram API" as TELEGRAM
 cloud "LLM Providers" as LLM
-rectangle "Miniverse" as MINIVERSE
+rectangle "NightCityVerse" as MINIVERSE
 
 BOT_APP --> TELEGRAM
 BOT_APP --> API_APP
@@ -58,4 +58,3 @@ No se usa como workspace del runner.
 end note
 
 @enduml
-

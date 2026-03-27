@@ -25,7 +25,7 @@ Los agentes tecnicos ejecutan trabajo especializado con limites claros por path 
 - API orquestadora como centro de estado y eventos
 - PM Agent separado de agentes tecnicos
 - MongoDB y Redis como persistencia y colas
-- Miniverse como capa visual no critica
+- NightCityVerse como capa visual no critica
 
 ## Restricciones clave
 - Planificado no implica iniciado

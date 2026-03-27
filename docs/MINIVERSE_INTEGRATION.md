@@ -1,10 +1,10 @@
-# Miniverse Integration
+# NightCityVerse Integration
 
 ## Objetivo
-Usar Miniverse como capa visual y social para observar agentes trabajando.
+Usar NightCityVerse como capa visual y social para observar agentes trabajando.
 
 ## Uso correcto
-Miniverse debe reflejar:
+NightCityVerse debe reflejar:
 - presencia de agentes,
 - estado actual,
 - mensajes operativos de alto nivel,
@@ -28,4 +28,4 @@ No debe ser:
 - `project.delivered`
 
 ## Recomendación
-Implementar un `miniverse-adapter` que traduzca eventos internos del orquestador a actualizaciones visuales.
+Implementar un `nightcityverse-adapter` que traduzca eventos internos del orquestador a actualizaciones visuales.

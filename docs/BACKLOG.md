@@ -126,12 +126,12 @@ Definir controles de aprobación humana.
 
 ---
 
-## Epic 10 — Miniverse
+## Epic 10 — NightCityVerse
 ### T31
-Definir eventos visibles en Miniverse.
+Definir eventos visibles en NightCityVerse.
 
 ### T32
-Diseñar adapter del orquestador a Miniverse.
+Diseñar adapter del orquestador a NightCityVerse.
 
 ### T33
 Definir qué datos jamás se publican visualmente.

@@ -17,7 +17,7 @@
   - Codex / gpt-5.3-codex
   - Claude Sonnet 4.6
   - Claude Opus 4.6
-- Miniverse API / WebSocket
+- NightCityVerse API / WebSocket
 
 ### Infraestructura
 - Linode VPS

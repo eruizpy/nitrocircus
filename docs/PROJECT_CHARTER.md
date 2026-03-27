@@ -7,7 +7,7 @@ NitroCircus
 Plataforma de orquestación multiagente para desarrollo de software.
 
 ## Visión
-Permitir que un Product Owner gestione proyectos de software mediante Telegram, mientras un PM agent planifica y coordina agentes técnicos especializados para frontend, backend y DevOps, con trazabilidad total en GitHub y visualización operativa en Miniverse.
+Permitir que un Product Owner gestione proyectos de software mediante Telegram, mientras un PM agent planifica y coordina agentes técnicos especializados para frontend, backend y DevOps, con trazabilidad total en GitHub y visualización operativa en NightCityVerse.
 
 ## Problema a resolver
 La coordinación manual entre múltiples agentes y herramientas suele generar:
@@ -27,7 +27,7 @@ NitroCircus busca resolver esto con un modelo explícito de control, estados, as
 - Asegurar separación entre planificación, ejecución y despliegue
 - Entregar proyectos terminados dentro del monorepo
 - Preparar despliegue solo a demanda
-- Visualizar actividad multiagente en Miniverse
+- Visualizar actividad multiagente en NightCityVerse
 
 ## No objetivos iniciales
 - Despliegue automático a producción

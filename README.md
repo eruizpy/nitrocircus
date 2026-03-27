@@ -20,7 +20,7 @@ Los proyectos terminados **no se publican automáticamente en producción**: que
 4. **GitHub es la fuente de verdad del trabajo**
 5. **Los proyectos terminados quedan dentro del monorepo, no en producción**
 6. **DevOps prepara despliegue solo bajo demanda**
-7. **Miniverse se usa como capa visual, no como cerebro del sistema**
+7. **NightCityVerse se usa como capa visual, no como cerebro del sistema**
 8. **Los bundles de entrega en `projects/` también se versionan**
 
 ## Estado inicial del proyecto
@@ -70,7 +70,7 @@ flowchart TD
     FE --> GH
     BE --> GH
     DO --> GH
-    ORCH --> MV[Miniverse Adapter]
+    ORCH --> MV[NightCityVerse Adapter]
 ```
 
 ## Regla crítica
