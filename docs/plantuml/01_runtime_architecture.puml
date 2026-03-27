@@ -1,0 +1,61 @@
+@startuml
+title NitroCircus - Runtime Architecture
+
+skinparam backgroundColor white
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+node "VPS / Host" {
+  frame "Docker Compose" {
+    node "api container" as API {
+      component "Fastify API" as API_APP
+    }
+    node "bot container" as BOT {
+      component "Telegram Bot" as BOT_APP
+    }
+    node "web container" as WEB {
+      component "React/Vite UI" as WEB_APP
+    }
+    database "mongo container" as MONGO
+    queue "redis container" as REDIS
+  }
+
+  frame "Host Processes" {
+    component "PM2: nitrocircus-agents" as PM2RUN
+    component "agent-runner\nNode.js + Claude Code SDK\nfallback OpenAI-compatible" as RUNNER
+    folder "/opt/nitrocircus\nproduction checkout" as PROD_REPO
+    folder "/opt/nitrocircus-runner\nisolated runner checkout" as RUNNER_REPO
+  }
+}
+
+cloud "GitHub" as GH
+cloud "Telegram API" as TELEGRAM
+cloud "LLM Providers" as LLM
+rectangle "Miniverse" as MINIVERSE
+
+BOT_APP --> TELEGRAM
+BOT_APP --> API_APP
+API_APP --> MONGO
+API_APP --> REDIS
+API_APP --> GH
+API_APP --> MINIVERSE
+REDIS --> RUNNER
+PM2RUN --> RUNNER
+RUNNER --> RUNNER_REPO : read/write code
+RUNNER --> API_APP : POST /commands
+RUNNER --> GH : push branches
+RUNNER --> LLM
+
+note right of RUNNER_REPO
+Checkout aislado para evitar
+contaminar producción con ramas
+de agentes o cambios transitorios.
+end note
+
+note right of PROD_REPO
+Debe quedar alineado con main.
+No se usa como workspace del runner.
+end note
+
+@enduml
+

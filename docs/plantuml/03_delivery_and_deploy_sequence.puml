@@ -1,0 +1,49 @@
+@startuml
+title NitroCircus - Delivery and Optional Deploy
+
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor PO as "Product Owner"
+participant BOT as "Telegram Bot"
+participant API as "Orchestrator API"
+database DB as "MongoDB"
+participant GH as "GitHub"
+collections FS as "projects/<slug>/"
+participant ZIP as "Bundle Builder"
+participant DO as "DevOps flow"
+
+== Deliver ==
+PO -> BOT : /deliver <project>
+BOT -> API : project.deliver
+API -> DB : normalize tasks -> done
+API -> DB : project -> delivered
+API -> GH : issues -> status:done / close
+API -> ZIP : export bundle
+ZIP -> GH : download main snapshot + task branches
+ZIP -> FS : write README/TASKS/RUNBOOK/\nARTIFACTS/.env.example/DELIVERY.json
+ZIP -> FS : create <slug>.zip
+API -> GH : publish top-level bundle files to main\n(best effort)
+API -> DB : log project.delivered
+BOT --> PO : entrega completada
+
+== Optional deploy ==
+PO -> BOT : /deploy <project>
+BOT -> API : project.deploy
+API -> DO : queue deploy preparation
+DO -> GH : workflows / secrets / pipeline
+DO --> PO : solicita IP / usuario / método auth
+
+note right of API
+Deliver no implica deploy.
+Deploy sigue siendo posterior y explícito.
+end note
+
+note right of GH
+Si la publicación automática falla,
+la entrega no se bloquea.
+El warning queda en DELIVERY.json y event logs.
+end note
+
+@enduml
+

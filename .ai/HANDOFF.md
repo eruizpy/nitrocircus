@@ -180,6 +180,10 @@ Resumen del cambio local:
   - archivo: `docs/prompts/SESSION_STABILITY_AND_SECURITY_PROMPT.md`
   - objetivo: evitar deriva arquitectonica en prompts de sesion y reforzar reglas operativas reales de NitroCircus
   - foco: estado real del repo, cambios pequenos, clasificacion de errores, aislamiento del runner, integraciones degradables, secretos y deploy bajo demanda
+- Se agrego un paquete completo de documentacion visual en PlantUML:
+  - indice: `docs/PLANTUML_ARCHITECTURE_AND_OPERATIONS.md`
+  - diagramas: `docs/plantuml/00_system_context.puml` a `docs/plantuml/05_integrations_and_boundaries.puml`
+  - alcance: contexto del sistema, arquitectura runtime, flujo operativo, entrega/despliegue, maquinas de estado e integraciones/limites de confianza
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

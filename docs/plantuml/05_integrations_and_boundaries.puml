@@ -1,0 +1,64 @@
+@startuml
+title NitroCircus - Integrations and Trust Boundaries
+
+skinparam backgroundColor white
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+rectangle "Trusted Core" {
+  component "Telegram Bot" as BOT
+  component "Orchestrator API" as API
+  database "MongoDB" as DB
+  queue "Redis" as REDIS
+}
+
+rectangle "Controlled Execution Boundary" {
+  component "agent-runner" as RUNNER
+  folder "isolated runner repo" as RR
+}
+
+cloud "GitHub API / Actions" as GH
+cloud "Telegram Bot API" as TG
+cloud "LLM Providers" as LLM
+rectangle "Miniverse" as MV
+cloud "External Integrations\n(e.g. WhatsApp, others)" as EXT
+
+BOT --> TG : bot messages
+BOT --> API : internal commands
+API --> DB : state + audit
+API --> REDIS : task queues
+API --> GH : issues / board / bundle publish
+API --> MV : visual events
+REDIS --> RUNNER : queue consumption
+RUNNER --> RR : code changes
+RUNNER --> API : callback only
+RUNNER --> GH : branches / PRs
+RUNNER --> LLM : model execution
+API --> EXT : optional/configurable integrations
+
+note right of EXT
+Regla operativa:
+si falta configuración de terceros,
+el sistema debe degradar o mockear,
+no romper el arranque base.
+end note
+
+note bottom of RUNNER
+No debe modificar producción directamente.
+No debe usar el checkout productivo
+como workspace.
+end note
+
+note left of GH
+Fuente de verdad del trabajo visible:
+issues, labels, project board, PRs,
+bundles top-level publicados.
+end note
+
+note left of DB
+Fuente de verdad operativa:
+proyectos, tareas, transiciones,
+event logs y agent runs.
+end note
+
+@enduml

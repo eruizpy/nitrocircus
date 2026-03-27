@@ -1,0 +1,37 @@
+@startuml
+title NitroCircus - State Machines
+
+skinparam backgroundColor white
+skinparam shadowing false
+
+package "Task State Machine" {
+  [backlog] --> [planned]
+  [planned] --> [assigned]
+  [assigned] --> [awaiting_start_approval]
+  [awaiting_start_approval] --> [in_progress]
+  [awaiting_start_approval] --> [backlog] : rejected by PO
+  [in_progress] --> [blocked]
+  [in_progress] --> [in_review]
+  [in_progress] --> [done]
+  [blocked] --> [in_progress]
+  [in_review] --> [in_progress] : changes requested
+  [in_review] --> [done]
+  [done] --> [delivered]
+}
+
+newpage
+
+title NitroCircus - Project State Machine
+
+package "Project State Machine" {
+  [draft] --> [planned]
+  [draft] --> [archived]
+  [planned] --> [active]
+  [planned] --> [archived]
+  [active] --> [delivered]
+  [active] --> [archived]
+  [delivered] --> [archived]
+}
+
+@enduml
+

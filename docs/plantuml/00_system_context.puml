@@ -1,0 +1,52 @@
+@startuml
+title NitroCircus - System Context
+
+skinparam backgroundColor white
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Product Owner" as PO
+rectangle "Telegram" as TG
+
+package "NitroCircus Platform" {
+  rectangle "Telegram Bot\n(grammY)" as BOT
+  rectangle "Orchestrator API\n(Fastify)" as API
+  rectangle "PM Agent" as PM
+  rectangle "Agent Runner" as RUNNER
+  rectangle "Miniverse Adapter" as MVAD
+}
+
+cloud "GitHub\nIssues / Projects / PRs / Actions" as GH
+database "MongoDB\nProjects / Epics / Tasks / EventLog / AgentRun" as MONGO
+queue "Redis\nQueues / Locks" as REDIS
+rectangle "Miniverse" as MINIVERSE
+cloud "LLM Providers\nGroq / Claude / OpenAI-compatible" as LLM
+
+PO --> TG : comandos y aprobaciones
+TG --> BOT : mensajes webhook/polling
+BOT --> API : commands
+API --> PM : planificar / analizar
+PM --> LLM : inferencia
+API --> MONGO : estado y auditoría
+API --> REDIS : encolar tareas
+API --> GH : issues / labels / board
+REDIS --> RUNNER : queue:frontend/backend/devops
+RUNNER --> LLM : ejecución técnica
+RUNNER --> API : callback task.agent_complete
+RUNNER --> GH : branch / commits / PRs
+API --> MVAD : eventos de alto nivel
+MVAD --> MINIVERSE : visualización
+
+note right of API
+Fuente de verdad operativa.
+Ni Telegram, ni GitHub, ni el runner
+deben modificar estado sin pasar por la API.
+end note
+
+note bottom of MINIVERSE
+Observabilidad visual.
+No es storage, cola ni sistema de aprobación.
+end note
+
+@enduml
+

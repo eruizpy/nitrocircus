@@ -1,0 +1,64 @@
+@startuml
+title NitroCircus - Operational Flow
+
+skinparam backgroundColor white
+skinparam shadowing false
+
+actor PO as "Product Owner"
+participant BOT as "Telegram Bot"
+participant API as "Orchestrator API"
+participant PM as "PM Agent"
+database DB as "MongoDB"
+queue REDIS as "Redis"
+participant GH as "GitHub"
+participant RUNNER as "agent-runner"
+participant LLM as "Execution Provider"
+
+== Create ==
+PO -> BOT : /new <descripcion>
+BOT -> API : project.create
+API -> DB : create Project(state=draft)
+API --> BOT : project created
+BOT --> PO : confirmación
+
+== Plan ==
+PO -> BOT : /plan <project>
+BOT -> API : project.plan
+API -> PM : analizar y descomponer
+PM --> API : épicas + tareas + agentes + criterios
+API -> DB : persist Project/Epic/Task
+API -> GH : create Issues + labels + board items
+API -> DB : tasks -> awaiting_start_approval
+BOT --> PO : resumen y tareas listas
+
+== Start ==
+PO -> BOT : /start <project>
+BOT -> API : project.start
+API -> DB : tasks -> in_progress
+API -> REDIS : enqueue by agent queue
+API -> GH : issues -> status:in_progress
+BOT --> PO : inicio autorizado
+
+== Execution ==
+REDIS -> RUNNER : BRPOP task
+RUNNER -> LLM : ejecutar tarea
+RUNNER -> GH : commit + push branch
+RUNNER -> API : task.agent_complete(in_review|blocked)
+API -> DB : transition task
+API -> GH : labels / board sync
+API --> BOT : estado disponible para /status
+
+== Approval ==
+PO -> BOT : /approve <task-id>
+BOT -> API : task.approve
+API -> DB : task -> done
+API -> GH : close issue + board -> Done
+BOT --> PO : aprobado
+
+note over API,DB
+La transición de estados siempre pasa por la API.
+El runner no cambia estado directamente en DB ni en GitHub.
+end note
+
+@enduml
+
