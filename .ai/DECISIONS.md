@@ -70,3 +70,8 @@
 - Decision: `notifyTaskState` del `agent-runner` debe apuntar explicitamente a `http://127.0.0.1:3000` por defecto, registrar exito/error del callback y reintentar automaticamente antes de dar por perdida una transicion.
 - Motivo: durante `cosito2` el runner completo desarrollo y publico ramas, pero las tareas quedaron en `in_progress` porque las transiciones `task.agent_complete` se perdieron sin dejar trazabilidad suficiente. El endpoint `/commands` demostro funcionar manualmente; el punto debil era la entrega silenciosa del callback desde el runner.
 - Alcance: aplica a todos los proyectos futuros. Si el callback no persiste, el runner ahora deja evidencia operativa y falla de forma visible en lugar de aparentar exito.
+
+## ADR-016 - Los bundles en `projects/` se versionan tambien en Git
+- Decision: los artefactos finales generados en `projects/<slug>/` dejan de considerarse solo persistencia local/produccion y pasan a ser parte versionada del monorepo.
+- Motivo: el estado anterior hacia que un proyecto pudiera existir en produccion pero no en el checkout local del equipo, rompiendo continuidad y auditoria del entregable real.
+- Alcance: al regenerar o entregar un proyecto, su carpeta en `projects/` debe poder traerse al repo local y commitearse. El despliegue sigue siendo opcional y posterior.

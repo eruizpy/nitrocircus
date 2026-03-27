@@ -1,0 +1,156 @@
+name: Deploy NitroCircus
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ── Type check ────────────────────────────────────────────────────────────────
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - run: npx tsc --noEmit -p apps/api/tsconfig.json
+      - run: npx tsc --noEmit -p apps/bot/tsconfig.json
+      - run: npx tsc --noEmit -p workers/agent-runner/tsconfig.json
+      - run: npx tsc --noEmit -p apps/web/tsconfig.json
+
+  # ── Deploy ────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Linode VPS
+    needs: typecheck
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+
+            echo "==> Pulling latest code..."
+            cd /opt/nitrocircus
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Installing dependencies..."
+            npm install
+
+            echo "==> Configuring firewall..."
+            ufw allow 22/tcp    > /dev/null 2>&1 || true
+            ufw allow 80/tcp    > /dev/null 2>&1 || true
+            ufw allow 443/tcp   > /dev/null 2>&1 || true
+            ufw allow 3001/tcp  > /dev/null 2>&1 || true
+            ufw allow 4321/tcp  > /dev/null 2>&1 || true
+            ufw deny 3000/tcp   > /dev/null 2>&1 || true
+            ufw deny 4322/tcp   > /dev/null 2>&1 || true
+            ufw deny 27017/tcp  > /dev/null 2>&1 || true
+            ufw deny 6379/tcp   > /dev/null 2>&1 || true
+            ufw --force enable  > /dev/null 2>&1 || true
+
+            echo "==> Stopping existing services..."
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml down --remove-orphans
+            sleep 2
+
+            echo "==> Rebuilding Docker services..."
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+            echo "==> Preparing isolated runner checkout..."
+            RUNNER_REPO=/opt/nitrocircus-runner
+            ORIGIN_URL=$(git remote get-url origin)
+            if [ ! -d "$RUNNER_REPO/.git" ]; then
+              git clone "$ORIGIN_URL" "$RUNNER_REPO"
+            fi
+            cd "$RUNNER_REPO"
+            git remote set-url origin "$ORIGIN_URL"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            npm install
+            cd /opt/nitrocircus
+
+            echo "==> Restarting agent-runner..."
+            set -a; . ./.env 2>/dev/null || true; set +a
+            export REPO_PATH=/opt/nitrocircus-runner
+            export ORCHESTRATOR_URL=http://127.0.0.1:3000
+            pm2 delete nitrocircus-agents 2>/dev/null || true
+            pm2 start "cd /opt/nitrocircus-runner && npm run start --workspace=workers/agent-runner" --name nitrocircus-agents
+
+            echo "==> Starting Miniverse backend (port 4322)..."
+            if pm2 describe miniverse > /dev/null 2>&1; then
+              pm2 restart miniverse
+            else
+              mkdir -p /opt/miniverse
+              cd /opt/miniverse
+              if [ ! -f package.json ]; then
+                npx --yes create-miniverse@latest .
+                npm install
+                # Fix WebSocket URL: use dynamic host instead of hardcoded localhost
+                echo 'import re' > /tmp/fix_ws.py
+                echo 'f = "/opt/miniverse/src/main.ts"' >> /tmp/fix_ws.py
+                echo 'try:' >> /tmp/fix_ws.py
+                echo '    c = open(f).read()' >> /tmp/fix_ws.py
+                echo '    c = re.sub("url:\\s*\\x27ws://[^\\x27]+/ws\\x27", "url: `ws://${window.location.host}/ws`", c)' >> /tmp/fix_ws.py
+                echo '    open(f,"w").write(c); print("WS URL fixed")' >> /tmp/fix_ws.py
+                echo 'except Exception as e: print("WS fix skipped:", e)' >> /tmp/fix_ws.py
+                python3 /tmp/fix_ws.py
+              fi
+              npm run build
+              pm2 start "npm run server -- --port 4322" --name miniverse
+            fi
+            cd /opt/nitrocircus
+
+            echo "==> Configuring nginx for Miniverse (port 4321)..."
+            if [ ! -f /etc/nginx/sites-available/miniverse ]; then
+              printf '%s\n' \
+                'server {' \
+                '    listen 4321;' \
+                '    root /opt/miniverse/dist;' \
+                '    index index.html;' \
+                '    location /api/ {' \
+                '        proxy_pass http://localhost:4322;' \
+                '        proxy_http_version 1.1;' \
+                '    }' \
+                '    location /ws {' \
+                '        proxy_pass http://localhost:4322;' \
+                '        proxy_http_version 1.1;' \
+                '        proxy_set_header Upgrade $http_upgrade;' \
+                '        proxy_set_header Connection "upgrade";' \
+                '    }' \
+                '    location / { try_files $uri $uri/ /index.html; }' \
+                '}' > /etc/nginx/sites-available/miniverse
+              ln -sf /etc/nginx/sites-available/miniverse /etc/nginx/sites-enabled/miniverse
+            fi
+            if command -v nginx &>/dev/null; then
+              nginx -t && systemctl reload nginx
+            fi
+
+            pm2 save
+
+            echo "==> Health check..."
+            for i in 1 2 3 4 5 6; do
+              sleep 5
+              if curl -sf http://localhost:3000/health; then
+                break
+              fi
+              if [ $i -eq 6 ]; then
+                echo "Health check failed after 30s"
+                exit 1
+              fi
+              echo "Waiting for API... (attempt $i)"
+            done
+
+            echo "==> Deploy complete."

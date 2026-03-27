@@ -1,0 +1,421 @@
+import type { Context } from 'grammy'
+import type { Project } from '@nitrocircus/shared'
+import { config } from './config'
+
+interface PlanResult {
+  summary: string
+  epicCount: number
+  taskCount: number
+  tasks: Array<{ id: string; title: string; assignedAgent?: string; state: string }>
+  risks: string[]
+  nextAction: string
+}
+import { sendCommand, findProject, getProjectTasks } from './orchestrator'
+import { formatProject, formatBoard, formatTaskList, esc } from './format'
+import {
+  startDeployConversation,
+  isInConversation,
+  handleConversationInput,
+  cancelConversation,
+} from './deploy-conversation'
+import {
+  startVoiceCapture,
+  isAwaitingVoice,
+  consumePending,
+  cancelVoiceCapture,
+} from './new-project-conversation'
+
+type Ctx = Context
+
+const HTML = { parse_mode: 'HTML' as const }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function actorId(ctx: Ctx): string {
+  return String(ctx.from!.id)
+}
+
+async function resolveProject(ctx: Ctx, arg: string): Promise<Project | null> {
+  const project = await findProject(arg)
+  if (!project) {
+    await ctx.reply(`Proyecto no encontrado: "${arg}"\nUsa /projects para ver la lista.`)
+    return null
+  }
+  return project
+}
+
+function parseArg(ctx: Ctx): string {
+  return (ctx.match as string | undefined)?.trim() ?? ''
+}
+
+// ── /new <nombre> ─────────────────────────────────────────────────────────────
+
+export async function cmdNew(ctx: Ctx): Promise<void> {
+  const name = parseArg(ctx)
+  if (!name) {
+    await ctx.reply('Uso: /new <nombre del proyecto>')
+    return
+  }
+
+  startVoiceCapture(actorId(ctx), name)
+  await ctx.reply(
+    `🎙 <b>${esc(name)}</b>\n\nEnviá una <b>nota de audio</b> describiendo los requerimientos del proyecto.\n\nTambién podés escribirlos como texto.\n\n<i>Usá /cancel para cancelar.</i>`,
+    HTML,
+  )
+}
+
+// ── Voice note handler — transcribes and creates the project ──────────────────
+
+export async function handleVoice(ctx: Ctx): Promise<void> {
+  const userId = actorId(ctx)
+  const pending = consumePending(userId)
+  if (!pending) return // No waiting for voice
+
+  await ctx.reply('🎙 Transcribiendo nota de audio...')
+
+  const voice = ctx.message?.voice
+  if (!voice) return
+
+  // Download voice file from Telegram
+  const fileInfo = await ctx.api.getFile(voice.file_id)
+  const fileUrl = `https://api.telegram.org/file/bot${config.telegramToken}/${fileInfo.file_path}`
+  const audioResponse = await fetch(fileUrl)
+  const audioBase64 = Buffer.from(await audioResponse.arrayBuffer()).toString('base64')
+
+  // Transcribe via API (Groq Whisper)
+  const transcribeRes = await sendCommand<{ transcript: string }>(
+    'audio.transcribe',
+    { audioBase64 },
+    userId,
+  )
+
+  if (!transcribeRes.ok || !transcribeRes.data) {
+    await ctx.reply(`❌ Error al transcribir: ${transcribeRes.error}\n\nEscribí los requerimientos como texto.`)
+    startVoiceCapture(userId, pending.name) // Restore state so they can retry with text
+    return
+  }
+
+  const description = transcribeRes.data.transcript
+  await ctx.reply(`📝 <b>Requerimientos recibidos:</b>\n\n<i>${esc(description)}</i>`, HTML)
+
+  await createProjectWithDescription(ctx, userId, pending.name, description)
+}
+
+async function createProjectWithDescription(
+  ctx: Ctx,
+  userId: string,
+  name: string,
+  description: string,
+): Promise<void> {
+  const res = await sendCommand<Project>('project.new', { name, description }, userId)
+  if (!res.ok || !res.data) {
+    await ctx.reply(`Error al crear el proyecto: ${res.error}`)
+    return
+  }
+  await ctx.reply(
+    `Proyecto creado ✅\n\n${formatProject(res.data)}\n\nUsa /plan <code>${res.data.id}</code> para planificarlo.`,
+    HTML,
+  )
+}
+
+// ── /plan <proyecto> ──────────────────────────────────────────────────────────
+
+export async function cmdPlan(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /plan <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  await ctx.reply(`⏳ El PM Agent está planificando <b>${esc(project.name)}</b>...\n<i>Puede tardar hasta 1 minuto si el LLM está bajo alta demanda.</i>`, HTML)
+
+  const res = await sendCommand<PlanResult>('project.plan', { projectId: project.id }, actorId(ctx))
+  if (!res.ok || !res.data) {
+    await ctx.reply(`Error: ${res.error}`)
+    return
+  }
+
+  const plan = res.data
+  const taskLines = plan.tasks
+    .slice(0, 8)
+    .map((t) => `  • ${esc(t.title)} [${t.assignedAgent ?? '?'}]`)
+    .join('\n')
+  const riskLines = plan.risks.length
+    ? plan.risks.map((r) => `  ⚠️ ${esc(r)}`).join('\n')
+    : '  Ninguno identificado'
+
+  await ctx.reply(
+    [
+      `📋 <b>Plan: ${esc(project.name)}</b>`,
+      '',
+      `${esc(plan.summary)}`,
+      '',
+      `Épicas: <b>${plan.epicCount}</b> | Tareas: <b>${plan.taskCount}</b>`,
+      '',
+      '<b>Tareas listas para iniciar:</b>',
+      taskLines + (plan.taskCount > 8 ? `\n  ... y ${plan.taskCount - 8} más` : ''),
+      '',
+      '<b>Riesgos:</b>',
+      riskLines,
+      '',
+      `💡 ${esc(plan.nextAction)}`,
+      '',
+      `⏳ Usa /start ${esc(project.name)} para autorizar el inicio.`,
+    ].join('\n'),
+    HTML,
+  )
+}
+
+// ── /board <proyecto> ─────────────────────────────────────────────────────────
+
+export async function cmdBoard(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /board <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  const res = await sendCommand<{ project: Project; taskCount: number; byState: Record<string, number> }>(
+    'project.board',
+    { projectId: project.id },
+    actorId(ctx),
+  )
+  if (!res.ok || !res.data) {
+    await ctx.reply(`Error: ${res.error}`)
+    return
+  }
+
+  const tasks = await getProjectTasks(project.id)
+  await ctx.reply(formatBoard(res.data.project, tasks, res.data.byState), HTML)
+}
+
+// ── /start <proyecto> ─────────────────────────────────────────────────────────
+
+export async function cmdStart(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /start <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  const res = await sendCommand<{ startedTasks: unknown[] }>(
+    'project.start',
+    { projectId: project.id },
+    actorId(ctx),
+  )
+  if (!res.ok || !res.data) {
+    await ctx.reply(`Error: ${res.error}`)
+    return
+  }
+
+  const count = res.data.startedTasks.length
+  await ctx.reply(
+    count > 0
+      ? `🚀 Desarrollo autorizado para <b>${esc(project.name)}</b>.\n${count} tarea(s) activada(s).`
+      : `⚠️ No hay tareas en <b>${esc(project.name)}</b> esperando aprobación.`,
+    HTML,
+  )
+}
+
+// ── /status <proyecto> ────────────────────────────────────────────────────────
+
+export async function cmdStatus(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /status <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  const tasks = await getProjectTasks(project.id)
+  const done  = tasks.filter((t) => t.state === 'done' || t.state === 'delivered').length
+  const total = tasks.length
+
+  await ctx.reply(
+    `📊 <b>${esc(project.name)}</b>\nEstado: ${project.state}\nProgreso: ${done}/${total} tareas completadas\n\n${formatTaskList(tasks)}`,
+    HTML,
+  )
+}
+
+// ── /approve <task-id> ────────────────────────────────────────────────────────
+
+export async function cmdApprove(ctx: Ctx): Promise<void> {
+  const taskId = parseArg(ctx)
+  if (!taskId) {
+    await ctx.reply('Uso: /approve <task-id>')
+    return
+  }
+
+  const res = await sendCommand('task.approve', { taskId }, actorId(ctx))
+  if (!res.ok) {
+    await ctx.reply(`Error: ${res.error}`)
+    return
+  }
+
+  await ctx.reply(`✅ Tarea aprobada: <code>${taskId}</code>`, HTML)
+}
+
+// ── /deliver <proyecto> ───────────────────────────────────────────────────────
+
+export async function cmdDeliver(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /deliver <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  const res = await sendCommand<{ project: Project; deliveryDir: string }>(
+    'project.deliver',
+    { projectId: project.id },
+    actorId(ctx),
+  )
+  if (!res.ok) {
+    await ctx.reply(`Error: ${res.error}`)
+    return
+  }
+
+  const deliveryPath = res.data?.deliveryDir?.split('/projects/')[1] ?? project.name
+  await ctx.reply(
+    [
+      `📦 <b>${esc(project.name)}</b> entregado.`,
+      '',
+      `Snapshot guardado en: <code>projects/${esc(deliveryPath)}/</code>`,
+      '• README.md — descripción y estado funcional',
+      '• TASKS.md — detalle de todas las tareas',
+      '• .env.example — variables de entorno',
+      '• DELIVERY.json — metadata de entrega',
+    ].join('\n'),
+    HTML,
+  )
+}
+
+// ── /deploy <proyecto> ────────────────────────────────────────────────────────
+
+export async function cmdDeploy(ctx: Ctx): Promise<void> {
+  const arg = parseArg(ctx)
+  if (!arg) {
+    await ctx.reply('Uso: /deploy <nombre o id del proyecto>')
+    return
+  }
+
+  const project = await resolveProject(ctx, arg)
+  if (!project) return
+
+  if (project.state !== 'delivered') {
+    await ctx.reply(
+      `⚠️ El proyecto debe estar en estado <b>delivered</b> para desplegarse.\nEstado actual: <code>${project.state}</code>`,
+      HTML,
+    )
+    return
+  }
+
+  const prompt = startDeployConversation(actorId(ctx), project.id, project.name)
+  await ctx.reply(prompt, HTML)
+}
+
+// ── /cancel — cancels active conversation ─────────────────────────────────────
+
+export async function cmdCancel(ctx: Ctx): Promise<void> {
+  const userId = actorId(ctx)
+  if (isAwaitingVoice(userId)) {
+    cancelVoiceCapture(userId)
+    await ctx.reply('❌ Operación cancelada.')
+  } else if (isInConversation(userId)) {
+    cancelConversation(userId)
+    await ctx.reply('❌ Operación cancelada.')
+  } else {
+    await ctx.reply('No hay ninguna operación activa.')
+  }
+}
+
+// ── Message handler — text fallback for voice capture + deploy conversation ────
+
+export async function handleMessage(ctx: Ctx): Promise<void> {
+  const userId = actorId(ctx)
+
+  // Text fallback: user typed requirements instead of sending a voice note
+  if (isAwaitingVoice(userId)) {
+    const pending = consumePending(userId)!
+    const description = ctx.message?.text?.trim() ?? ''
+    if (!description) return
+    await createProjectWithDescription(ctx, userId, pending.name, description)
+    return
+  }
+
+  if (!isInConversation(userId)) return
+
+  const text = ctx.message?.text ?? ''
+  const result = handleConversationInput(userId, text)
+  if (!result) return
+
+  if (!result.done) {
+    await ctx.reply(result.reply, HTML)
+    return
+  }
+
+  // Conversation complete — send deploy command to API
+  await ctx.reply(result.reply, HTML)
+
+  const { params } = result
+  const res = await sendCommand(
+    'project.deploy',
+    {
+      projectId: params.projectId,
+      serverIp: params.serverIp,
+      sshUser: params.sshUser,
+      sshPass: params.sshPass,
+      domain: params.domain,
+    },
+    userId,
+  )
+
+  if (!res.ok) {
+    await ctx.reply(`❌ Error al iniciar despliegue: ${res.error}`)
+    return
+  }
+
+  await ctx.reply(
+    [
+      `🚀 <b>Deploy iniciado para ${esc(params.projectName)}</b>`,
+      '',
+      'El DevOps Agent está configurando:',
+      '• GitHub Actions CI/CD pipeline',
+      '• Scripts de despliegue en el servidor',
+      params.domain ? `• Dominio: <code>${params.domain}</code>` : '',
+      '',
+      'Recibirás una notificación cuando termine.',
+    ].filter(Boolean).join('\n'),
+    HTML,
+  )
+}
+
+// ── /projects ─────────────────────────────────────────────────────────────────
+
+export async function cmdProjects(ctx: Ctx): Promise<void> {
+  const { getProjects } = await import('./orchestrator')
+  const projects = await getProjects()
+
+  if (projects.length === 0) {
+    await ctx.reply('No hay proyectos aún. Usa /new <nombre> para crear uno.')
+    return
+  }
+
+  const lines = projects
+    .map((p) => `• <b>${esc(p.name)}</b> [${p.state}]\n  ID: <code>${p.id}</code>`)
+    .join('\n\n')
+  await ctx.reply(lines, HTML)
+}

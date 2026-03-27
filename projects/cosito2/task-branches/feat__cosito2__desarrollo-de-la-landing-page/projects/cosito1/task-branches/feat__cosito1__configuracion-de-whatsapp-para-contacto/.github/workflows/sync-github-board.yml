@@ -1,0 +1,130 @@
+name: Sync GitHub Board
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Force-sync task states to GitHub Projects board
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Sync via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /opt/nitrocircus
+            set -a; . ./.env 2>/dev/null || true; set +a
+
+            # Write script to file to avoid bash escaping issues with $ in GraphQL
+            cat > /tmp/sync-board.mjs << 'SCRIPT'
+            import { MongoClient } from 'mongodb';
+
+            const STATE_TO_LABEL = {
+              planned: 'status:planned', assigned: 'status:planned',
+              awaiting_start_approval: 'status:planned',
+              in_progress: 'status:in_progress', blocked: 'status:blocked',
+              in_review: 'status:in_review', done: 'status:done', delivered: 'status:done',
+            };
+            const STATE_TO_KW = {
+              backlog: 'backlog', planned: 'ready', assigned: 'ready',
+              awaiting_start_approval: 'ready', in_progress: 'progress',
+              blocked: 'progress', in_review: 'review', done: 'done', delivered: 'done',
+            };
+
+            const OWNER = process.env.GITHUB_OWNER;
+            const REPO  = process.env.GITHUB_REPO;
+            const TOKEN = process.env.GITHUB_TOKEN;
+            const PROJ_N = parseInt(process.env.GITHUB_PROJECT_NUMBER || '1', 10);
+            const GH_HEADERS = { Authorization: `Bearer ${TOKEN}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' };
+
+            async function ghRest(path, method, body) {
+              const r = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}${path}`, { method, headers: GH_HEADERS, body: body ? JSON.stringify(body) : undefined });
+              return r.json();
+            }
+            async function ghGql(query, variables) {
+              const r = await fetch('https://api.github.com/graphql', { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables }) });
+              const j = await r.json();
+              if (j.errors?.length) throw new Error(j.errors.map(e => e.message).join('; '));
+              return j.data;
+            }
+
+            async function loadProjectCfg() {
+              const q = `query($login: String!, $number: Int!) {
+                user(login: $login) {
+                  projectV2(number: $number) {
+                    id
+                    fields(first: 20) { nodes { __typename ... on ProjectV2SingleSelectField { id name options { id name } } } }
+                  }
+                }
+              }`;
+              const data = await ghGql(q, { login: OWNER, number: PROJ_N });
+              if (!data?.user?.projectV2) throw new Error(`Project not found (owner=${OWNER}, number=${PROJ_N})`);
+              const pv2 = data.user.projectV2;
+              const sf = pv2.fields.nodes.find(n => n.name === 'Status');
+              if (!sf) throw new Error('Status field not found in project');
+              return { projectId: pv2.id, statusFieldId: sf.id, options: sf.options };
+            }
+
+            const mongo = new MongoClient(process.env.MONGO_URI || 'mongodb://nitro:nitro@localhost:27017/nitrocircus?authSource=admin');
+            await mongo.connect();
+            const db = mongo.db(process.env.MONGO_DB || 'nitrocircus');
+
+            const tasks = await db.collection('tasks').find({ githubIssueNumber: { $exists: true, $ne: null } }).toArray();
+            console.log(`Found ${tasks.length} tasks with GitHub issues`);
+
+            // Project board (needs 'project' OAuth scope — optional)
+            let cfg = null;
+            try {
+              cfg = await loadProjectCfg();
+              console.log('Project board config loaded ✓');
+            } catch(e) {
+              console.warn('Project board unavailable (token may need "project" scope):', e.message);
+              console.warn('Will sync issue labels only.');
+            }
+
+            let synced = 0;
+
+            for (const task of tasks) {
+              try {
+                // Always sync issue labels (REST API — works with repo scope)
+                const issue = await ghRest(`/issues/${task.githubIssueNumber}`, 'GET');
+                const labels = issue.labels.map(l => l.name).filter(n => !n.startsWith('status:'));
+                const statusLabel = STATE_TO_LABEL[task.state];
+                if (statusLabel) labels.push(statusLabel);
+                await ghRest(`/issues/${task.githubIssueNumber}`, 'PATCH', {
+                  labels,
+                  state: (task.state === 'done' || task.state === 'delivered') ? 'closed' : 'open',
+                });
+
+                // Move card on project board if token has project scope
+                if (cfg && task.githubProjectItemId) {
+                  const kw = STATE_TO_KW[task.state];
+                  const opt = cfg.options.find(o => o.name.toLowerCase().includes(kw));
+                  if (opt) {
+                    const mutation = `mutation($p: ID!, $i: ID!, $f: ID!, $v: String!) {
+                      updateProjectV2ItemFieldValue(input: { projectId: $p, itemId: $i, fieldId: $f, value: { singleSelectOptionId: $v } }) {
+                        projectV2Item { id }
+                      }
+                    }`;
+                    await ghGql(mutation, { p: cfg.projectId, i: task.githubProjectItemId, f: cfg.statusFieldId, v: opt.id });
+                  }
+                }
+
+                console.log(`  #${task.githubIssueNumber} [${task.state}] ${task.title.slice(0, 50)}`);
+                synced++;
+              } catch(e) {
+                console.warn(`  FAILED #${task.githubIssueNumber}:`, e.message);
+              }
+            }
+
+            console.log(`Done: ${synced}/${tasks.length} synced`);
+            await mongo.close();
+            SCRIPT
+
+            node --input-type=module < /tmp/sync-board.mjs

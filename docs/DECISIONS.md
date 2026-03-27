@@ -29,10 +29,10 @@ Trazabilidad y flujo estándar de ingeniería.
 
 ## ADR-004 — Los proyectos terminados se entregan dentro del monorepo
 **Decisión**  
-Todo proyecto terminado queda bajo `/projects/<name>`.
+Todo proyecto terminado queda bajo `/projects/<name>` y su bundle de entrega también se versiona en Git.
 
 **Motivo**  
-No publicar automáticamente y mantener control.
+No publicar automáticamente, mantener control y asegurar que los artefactos entregados estén disponibles tanto en producción como en los clones locales del repositorio.
 
 ---
 

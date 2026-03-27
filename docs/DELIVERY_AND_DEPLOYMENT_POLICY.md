@@ -7,6 +7,7 @@ Todo proyecto culminado deberá considerarse **entregado en estado no productivo
 - no se publica automáticamente en producción;
 - no se despliega en ninguna VPS por defecto;
 - queda almacenado dentro del repositorio principal en una carpeta con su nombre;
+- el contenido de `/projects/<nombre-del-proyecto>/` también debe quedar versionado en Git;
 - debe incluir documentación mínima de uso y arquitectura.
 
 ## Ubicación estándar

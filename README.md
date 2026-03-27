@@ -10,7 +10,7 @@ Sistema de orquestación multiagente para desarrollo de software, gestionado por
 ## Objetivo
 
 NitroCircus coordina planificación, ejecución técnica, documentación y entrega de proyectos dentro de un repositorio principal.  
-Los proyectos terminados **no se publican automáticamente en producción**: quedan entregados dentro de un directorio interno del repositorio y solo se preparan para despliegue cuando el Product Owner lo ordena.
+Los proyectos terminados **no se publican automáticamente en producción**: quedan entregados dentro de un directorio interno del repositorio, se versionan también en Git y solo se preparan para despliegue cuando el Product Owner lo ordena.
 
 ## Principios operativos
 
@@ -21,6 +21,7 @@ Los proyectos terminados **no se publican automáticamente en producción**: que
 5. **Los proyectos terminados quedan dentro del monorepo, no en producción**
 6. **DevOps prepara despliegue solo bajo demanda**
 7. **Miniverse se usa como capa visual, no como cerebro del sistema**
+8. **Los bundles de entrega en `projects/` también se versionan**
 
 ## Estado inicial del proyecto
 

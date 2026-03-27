@@ -1,0 +1,90 @@
+{
+  "projectId": "69c6c090a38aaa4edbb279d9",
+  "projectName": "cosito2",
+  "slug": "cosito2",
+  "deliveredAt": "2026-03-27T18:20:35.629Z",
+  "epicCount": 3,
+  "taskCount": 4,
+  "archiveName": "cosito2.zip",
+  "sourceRef": "main",
+  "warnings": [],
+  "artifacts": [
+    {
+      "kind": "base",
+      "ref": "main",
+      "title": "Snapshot base main",
+      "outputDir": "source/main",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito2/diseno-de-la-interfaz-de-usuario",
+      "title": "Diseño de la Interfaz de Usuario",
+      "agent": "frontend",
+      "issueNumber": 123,
+      "outputDir": "task-branches/feat__cosito2__diseno-de-la-interfaz-de-usuario",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito2/desarrollo-de-la-landing-page",
+      "title": "Desarrollo de la Landing Page",
+      "agent": "frontend",
+      "issueNumber": 124,
+      "outputDir": "task-branches/feat__cosito2__desarrollo-de-la-landing-page",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito2/investigacion-y-seleccion-de-imagenes",
+      "title": "Investigación y Selección de Imágenes",
+      "agent": "frontend",
+      "issueNumber": 125,
+      "outputDir": "task-branches/feat__cosito2__investigacion-y-seleccion-de-imagenes",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito2/configuracion-de-la-api-de-whatsapp",
+      "title": "Configuración de la API de WhatsApp",
+      "agent": "backend",
+      "issueNumber": 126,
+      "outputDir": "task-branches/feat__cosito2__configuracion-de-la-api-de-whatsapp",
+      "status": "exported"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "69c6c0a8a38aaa4edbb279dc",
+      "title": "Diseño de la Interfaz de Usuario",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito2/diseno-de-la-interfaz-de-usuario",
+      "issue": 123
+    },
+    {
+      "id": "69c6c0a8a38aaa4edbb279e1",
+      "title": "Desarrollo de la Landing Page",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito2/desarrollo-de-la-landing-page",
+      "issue": 124
+    },
+    {
+      "id": "69c6c0a9a38aaa4edbb279e7",
+      "title": "Investigación y Selección de Imágenes",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito2/investigacion-y-seleccion-de-imagenes",
+      "issue": 125
+    },
+    {
+      "id": "69c6c0aaa38aaa4edbb279ed",
+      "title": "Configuración de la API de WhatsApp",
+      "state": "done",
+      "agent": "backend",
+      "branch": "feat/cosito2/configuracion-de-la-api-de-whatsapp",
+      "issue": 126
+    }
+  ]
+}

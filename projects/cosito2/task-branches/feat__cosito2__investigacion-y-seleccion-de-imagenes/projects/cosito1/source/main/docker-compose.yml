@@ -1,0 +1,85 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-nitro}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS:-nitro}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-nitrocircus}
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://${MONGO_USER:-nitro}:${MONGO_PASS:-nitro}@mongo:27017/${MONGO_DB:-nitrocircus}?authSource=admin
+      REDIS_URL: redis://redis:6379
+      MINIVERSE_URL: ${MINIVERSE_URL:-http://host.docker.internal:4321}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./projects:/app/projects
+
+  bot:
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+      ORCHESTRATOR_URL: http://api:3000
+    depends_on:
+      - api
+    volumes:
+      - ./apps/bot/src:/app/apps/bot/src
+      - ./packages/shared/src:/app/packages/shared/src
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"

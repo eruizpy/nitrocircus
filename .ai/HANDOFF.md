@@ -166,6 +166,10 @@ Resumen del cambio local:
   - se reemitio `task.agent_complete` de forma controlada
   - `#123`, `#124`, `#125` y `#126` quedaron persistidos en `in_review`
   - la cuarta devolvio transicion invalida al reemitir porque ya estaba fuera de `in_progress`, lo que confirma consistencia final
+- Se alineo la politica de entregables con el repo local:
+  - se copio `projects/cosito2/` desde produccion al workspace local
+  - el bundle local incluye `README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example`, `DELIVERY.json` y `cosito2.zip`
+  - se formalizo la regla de que `projects/<slug>/` tambien debe versionarse en Git para que el equipo vea localmente el entregable real
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

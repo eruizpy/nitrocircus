@@ -1,0 +1,19 @@
+{
+  "name": "@nitrocircus/agent-runner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.22",
+    "@nitrocircus/shared": "*",
+    "ioredis": "^5"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

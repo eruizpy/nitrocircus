@@ -1,0 +1,31 @@
+# Production overrides for docker-compose.yml
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Port security is handled by UFW firewall (see deploy/setup.sh):
+#   - Port 3000 blocked externally — only accessible via localhost
+#   - MongoDB (27017) and Redis (6379) blocked externally
+#   - SSH (22) open
+#
+# This file overrides non-port settings for production.
+
+services:
+  api:
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./projects:/app/projects
+
+  bot:
+    environment:
+      NODE_ENV: production
+    volumes: !reset []   # No source mounts — use built image
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - api

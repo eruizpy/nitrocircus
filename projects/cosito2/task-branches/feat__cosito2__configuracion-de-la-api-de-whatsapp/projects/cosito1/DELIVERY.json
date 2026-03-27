@@ -1,0 +1,175 @@
+{
+  "projectId": "69c69c1c7910ce6e9ae20355",
+  "projectName": "cosito1",
+  "slug": "cosito1",
+  "deliveredAt": "2026-03-27T17:30:41.562Z",
+  "epicCount": 4,
+  "taskCount": 9,
+  "archiveName": "cosito1.zip",
+  "sourceRef": "main",
+  "warnings": [],
+  "artifacts": [
+    {
+      "kind": "base",
+      "ref": "main",
+      "title": "Snapshot base main",
+      "outputDir": "source/main",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/diseno-de-la-interfaz-de-usuario",
+      "title": "Diseño de la Interfaz de Usuario",
+      "agent": "frontend",
+      "issueNumber": 114,
+      "outputDir": "task-branches/feat__cosito1__diseno-de-la-interfaz-de-usuario",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/desarrollo-de-la-landing-page",
+      "title": "Desarrollo de la Landing Page",
+      "agent": "frontend",
+      "issueNumber": 115,
+      "outputDir": "task-branches/feat__cosito1__desarrollo-de-la-landing-page",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/crear-un-dockerfile",
+      "title": "Crear un Dockerfile",
+      "agent": "devops",
+      "issueNumber": 116,
+      "outputDir": "task-branches/feat__cosito1__crear-un-dockerfile",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/crear-una-imagen-docker",
+      "title": "Crear una imagen Docker",
+      "agent": "devops",
+      "issueNumber": 117,
+      "outputDir": "task-branches/feat__cosito1__crear-una-imagen-docker",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/investigacion-y-planificacion-del-diseno",
+      "title": "Investigación y Planificación del Diseño",
+      "agent": "frontend",
+      "issueNumber": 118,
+      "outputDir": "task-branches/feat__cosito1__investigacion-y-planificacion-del-diseno",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/creacion-de-prototipo-de-alta-fidelidad",
+      "title": "Creación de Prototipo de Alta Fidelidad",
+      "agent": "frontend",
+      "issueNumber": 119,
+      "outputDir": "task-branches/feat__cosito1__creacion-de-prototipo-de-alta-fidelidad",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/desarrollo-frontend-de-la-landing-page",
+      "title": "Desarrollo Frontend de la Landing Page",
+      "agent": "frontend",
+      "issueNumber": 120,
+      "outputDir": "task-branches/feat__cosito1__desarrollo-frontend-de-la-landing-page",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/configuracion-de-whatsapp-para-contacto",
+      "title": "Configuración de WhatsApp para Contacto",
+      "agent": "frontend",
+      "issueNumber": 121,
+      "outputDir": "task-branches/feat__cosito1__configuracion-de-whatsapp-para-contacto",
+      "status": "exported"
+    },
+    {
+      "kind": "task-branch",
+      "ref": "feat/cosito1/creacion-de-imagen-de-docker",
+      "title": "Creación de Imagen de Docker",
+      "agent": "devops",
+      "issueNumber": 122,
+      "outputDir": "task-branches/feat__cosito1__creacion-de-imagen-de-docker",
+      "status": "exported"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "69c69c527910ce6e9ae20358",
+      "title": "Diseño de la Interfaz de Usuario",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/diseno-de-la-interfaz-de-usuario",
+      "issue": 114
+    },
+    {
+      "id": "69c69c537910ce6e9ae2035d",
+      "title": "Desarrollo de la Landing Page",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/desarrollo-de-la-landing-page",
+      "issue": 115
+    },
+    {
+      "id": "69c69c547910ce6e9ae20363",
+      "title": "Crear un Dockerfile",
+      "state": "done",
+      "agent": "devops",
+      "branch": "feat/cosito1/crear-un-dockerfile",
+      "issue": 116
+    },
+    {
+      "id": "69c69c557910ce6e9ae20368",
+      "title": "Crear una imagen Docker",
+      "state": "done",
+      "agent": "devops",
+      "branch": "feat/cosito1/crear-una-imagen-docker",
+      "issue": 117
+    },
+    {
+      "id": "69c69cc57910ce6e9ae20370",
+      "title": "Investigación y Planificación del Diseño",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/investigacion-y-planificacion-del-diseno",
+      "issue": 118
+    },
+    {
+      "id": "69c69cc67910ce6e9ae20375",
+      "title": "Creación de Prototipo de Alta Fidelidad",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/creacion-de-prototipo-de-alta-fidelidad",
+      "issue": 119
+    },
+    {
+      "id": "69c69cc77910ce6e9ae2037a",
+      "title": "Desarrollo Frontend de la Landing Page",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/desarrollo-frontend-de-la-landing-page",
+      "issue": 120
+    },
+    {
+      "id": "69c69cc77910ce6e9ae20380",
+      "title": "Configuración de WhatsApp para Contacto",
+      "state": "done",
+      "agent": "frontend",
+      "branch": "feat/cosito1/configuracion-de-whatsapp-para-contacto",
+      "issue": 121
+    },
+    {
+      "id": "69c69cc87910ce6e9ae20385",
+      "title": "Creación de Imagen de Docker",
+      "state": "done",
+      "agent": "devops",
+      "branch": "feat/cosito1/creacion-de-imagen-de-docker",
+      "issue": 122
+    }
+  ]
+}
