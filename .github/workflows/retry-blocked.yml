@@ -32,7 +32,8 @@ jobs:
               await mongo.connect();
               const db = mongo.db(process.env.MONGO_DB || 'nitrocircus');
 
-              const tasks = await db.collection('tasks').find({ state: 'blocked' }).toArray();
+              // blocked = notified failure; in_progress = silently failed (e.g. git error before try/catch)
+              const tasks = await db.collection('tasks').find({ state: { $in: ['blocked', 'in_progress'] } }).toArray();
               const projects = await db.collection('projects').find({}).toArray();
               const epics   = await db.collection('epics').find({}).toArray();
 
