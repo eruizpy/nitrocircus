@@ -1,39 +1,44 @@
-:root {
-  --bg: #0f1117;
-  --surface: #1a1d27;
-  --surface-2: #222535;
-  --border: #2a2d3e;
-  --text: #e1e4f0;
-  --text-muted: #6b7280;
-  --primary: #7c6aff;
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+.dashboard h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
+.dashboard p {
+  font-size: 18px;
+  margin-bottom: 40px;
 }
 
-code {
-  background: var(--surface-2);
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-}
-
-button {
-  cursor: pointer;
+.btn-whatsapp {
+  background-color: #25D366;
+  color: #fff;
+  padding: 10px 20px;
   border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.project-detail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.project-detail h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
+}
+
+.project-detail p {
+  font-size: 18px;
+  margin-bottom: 40px;
 }
