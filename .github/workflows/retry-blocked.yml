@@ -1,0 +1,82 @@
+name: Retry Blocked Tasks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  retry:
+    name: Re-queue all blocked tasks
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Retry via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /opt/nitrocircus
+            source .env 2>/dev/null || true
+
+            node -e "
+            const { MongoClient, ObjectId } = require('mongodb');
+            const Redis = require('ioredis');
+
+            async function main() {
+              const mongo = new MongoClient(process.env.MONGO_URI || 'mongodb://nitro:nitro@localhost:27017/nitrocircus?authSource=admin');
+              const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+              await mongo.connect();
+              const db = mongo.db(process.env.MONGO_DB || 'nitrocircus');
+
+              const tasks = await db.collection('tasks').find({ state: 'blocked' }).toArray();
+              const projects = await db.collection('projects').find({}).toArray();
+              const epics   = await db.collection('epics').find({}).toArray();
+
+              const byProject = Object.fromEntries(projects.map(p => [p._id.toString(), p]));
+              const byEpic    = Object.fromEntries(epics.map(e => [e._id.toString(), e]));
+
+              let count = 0;
+              for (const task of tasks) {
+                if (!task.assignedAgent || task.assignedAgent === 'pm') continue;
+
+                const project = byProject[task.projectId];
+                if (!project) { console.log('No project for task', task._id); continue; }
+
+                const epicTitle = task.epicId && byEpic[task.epicId]
+                  ? byEpic[task.epicId].title
+                  : 'Sin épica';
+
+                await db.collection('tasks').updateOne(
+                  { _id: task._id },
+                  { \$set: { state: 'in_progress', updatedAt: new Date() } }
+                );
+
+                const payload = JSON.stringify({
+                  taskId:              task._id.toString(),
+                  projectId:           task.projectId,
+                  projectName:         project.name,
+                  epicTitle,
+                  title:               task.title,
+                  description:         task.description,
+                  acceptanceCriteria:  task.acceptanceCriteria || [],
+                  agentType:           task.assignedAgent,
+                  priority:            task.priority,
+                  githubBranch:        task.githubBranch,
+                });
+
+                await redis.lpush('queue:' + task.assignedAgent, payload);
+                console.log('Re-queued:', task.title, '->', task.assignedAgent);
+                count++;
+              }
+
+              console.log(count + ' task(s) re-queued');
+              await mongo.close();
+              redis.disconnect();
+            }
+
+            main().catch(e => { console.error(e); process.exit(1); });
+            "

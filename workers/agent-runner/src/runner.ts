@@ -5,7 +5,7 @@ import type { AgentTask } from './types'
 import { AGENT_CONFIGS } from './agents'
 import { notifyTaskState, emitMiniverse } from './notify'
 
-const REPO_PATH = process.env.REPO_PATH ?? path.resolve(__dirname, '../../../..')
+const REPO_PATH = process.env.REPO_PATH ?? path.resolve(__dirname, '../../..')
 
 export async function runAgent(task: AgentTask): Promise<void> {
   const config = AGENT_CONFIGS[task.agentType]
