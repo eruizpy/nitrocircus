@@ -153,6 +153,19 @@ Resumen del cambio local:
   - `/opt/nitrocircus-runner` quedo en `main` sobre `bb87b92`
   - `pm2` muestra `nitrocircus-agents` online y con `REPO_PATH=/opt/nitrocircus-runner`
   - `curl http://172.233.163.22:3000/health` responde sano otra vez
+- Se detecto un segundo cuello puntual en `cosito2`: las ramas de tarea se publicaban, pero las transiciones `task.agent_complete` no quedaban persistidas.
+- Se probo manualmente el endpoint `/commands` en produccion con una tarea real de `cosito2` y respondio `200`, confirmando que la API y `transitionTask` si funcionan cuando reciben el callback.
+- Se implemento `f22dce8` (`fix(runner): retry and trace orchestrator callbacks`) para endurecer el callback del runner:
+  - `notifyTaskState` ahora usa `http://127.0.0.1:3000` por defecto
+  - registra exito/error por intento
+  - reintenta hasta `3` veces antes de fallar
+  - el workflow de deploy exporta explicitamente `ORCHESTRATOR_URL=http://127.0.0.1:3000` al reiniciar PM2
+- El deploy `23660804889` termino `success` y el runner nuevo quedo levantado mostrando `API:  http://127.0.0.1:3000`.
+- Se reconcilio `cosito2` contra la evidencia real del runner viejo:
+  - las 4 tareas ya tenian branch publicada y trabajo terminado
+  - se reemitio `task.agent_complete` de forma controlada
+  - `#123`, `#124`, `#125` y `#126` quedaron persistidos en `in_review`
+  - la cuarta devolvio transicion invalida al reemitir porque ya estaba fuera de `in_progress`, lo que confirma consistencia final
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -185,7 +198,8 @@ Resumen del cambio local:
 - Ese residual de `cosito1` ya quedo resuelto; el bundle ahora exporta tambien la branch reconstruida de `#116`.
 - Produccion ya no comparte checkout entre app y runner. El arbol de la app y el workspace del runner quedaron separados.
 - La regla operativa vigente es que futuras integraciones externas no deben volver obligatorio el arranque del sistema base; deben ser configurables y mockeables.
-- `cosito2` quedo creado, planificado e iniciado. Sus tareas existen con agente asignado e issues `#123` a `#126`, pero la prueba E2E debe retomarse desde este punto ya con el entorno saneado.
+- `cosito2` quedo saneado otra vez tras la perdida historica de callbacks: sus `4` tareas tienen `assignedAgent`, branch publicada y estado persistido `in_review`.
+- El siguiente tramo de validacion E2E de `cosito2` ya puede continuar desde `/deliver`, no desde `/start`.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
