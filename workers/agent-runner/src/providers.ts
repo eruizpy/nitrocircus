@@ -41,6 +41,7 @@ export function shouldFallback(failure: ProviderFailure): boolean {
   return failure.code === 'quota_exceeded'
     || failure.code === 'auth_missing'
     || failure.code === 'config_missing'
+    || (failure.provider === 'claude' && failure.code === 'provider_exit')
 }
 
 export async function runWithProvider(

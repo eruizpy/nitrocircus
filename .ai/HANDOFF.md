@@ -62,6 +62,9 @@ Resumen del cambio local:
 - Se detecto luego una contradiccion operativa: en los workflows remotos, `source .env` no era portable y el runner seguia sin recibir `OPENAI_*` aunque el deploy terminara `success`.
 - Se corrigieron los workflows `deploy`, `retry-blocked`, `sync-github-board` y `db-reset` para usar sintaxis POSIX (`. ./.env`) en lugar de `source .env`.
 - En produccion se aplico el restart manual correcto del runner con `. /opt/nitrocircus/.env`, y se verifico en PM2 que `nitrocircus-agents` ya tiene `AGENT_PRIMARY_PROVIDER=claude`, `AGENT_FALLBACK_PROVIDER=openai`, `OPENAI_BASE_URL=https://api.groq.com/openai/v1`, `OPENAI_MODEL=llama-3.3-70b-versatile` y `hasOpenAIKey=true`.
+- Se ejecuto `Retry Blocked Tasks` (run `23654149504`) y las 9 tareas de `cosito1` se reencolaron correctamente.
+- Los logs del runner mostraron una nueva evidencia: el SDK de Claude en produccion sigue reportando el caso de cuota como `Claude Code process exited with code 1`, es decir `provider_exit`, sin exponer el texto de cuota al clasificador.
+- Se ajusto la politica de fallback para que `provider_exit` de `claude` tambien habilite fallback cuando existe proveedor secundario configurado.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -75,7 +78,8 @@ Resumen del cambio local:
 - El nuevo proyecto de prueba `cosito1` existe, esta planificado y sus tareas/issues ya fueron creados.
 - Las tareas de `cosito1` quedaron `blocked` por cuota agotada de Claude Code, no por fallo de orquestacion.
 - El repo ahora incluye soporte para fallback del runner, pero hasta desplegarlo y cargar `OPENAI_*` en produccion ese fallback aun no esta activo.
-- Produccion ya quedo con fallback activable en caliente y el runner host ya tiene las variables cargadas; falta reencolar tareas y validar comportamiento real del fallback.
+- Produccion ya quedo con fallback activable en caliente y el runner host ya tiene las variables cargadas.
+- Queda pendiente desplegar el ajuste final que interpreta `provider_exit` de Claude como candidato a fallback y volver a reencolar las tareas para validacion definitiva.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -97,9 +101,10 @@ Resumen del cambio local:
     - `OPENAI_MODEL=llama-3.3-70b-versatile`
 15. Ejecutar el workflow `Retry Blocked Tasks` y verificar que las tareas de `cosito1` se reencolen con el runner actualizado.
 16. Si se necesita validacion inmediata antes del siguiente deploy, reiniciar manualmente el runner con `. /opt/nitrocircus/.env` y `pm2 restart nitrocircus-agents --update-env`.
+17. Confirmar en logs del runner mensajes del tipo `claude failed ... trying openai` para validar que el fallback finalmente se activa.
 
 ## Siguiente paso recomendado
-Desplegar el soporte de fallback, cargar `OPENAI_*` en produccion y ejecutar `Retry Blocked Tasks` para reintentar las tareas de `cosito1` con fallback automatico cuando Claude vuelva a quedar sin cuota.
+Desplegar el ajuste final para `provider_exit`, ejecutar nuevamente `Retry Blocked Tasks` y confirmar en logs que el runner pasa de `claude` a `openai` sin dejar las tareas en `blocked` por cuota.
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
