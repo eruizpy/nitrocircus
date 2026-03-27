@@ -35,22 +35,33 @@ Resumen del cambio local:
 - Se versionaron los cambios en el commit `0d03d1b` (`ops: persist session continuity and harden board sync`).
 - Se hizo push a `main` y el workflow `Deploy NitroCircus` finalizo `success` en GitHub Actions (run `23648857758`).
 - Se verifico salud de produccion con `curl http://172.233.163.22:3000/health` y la API respondio `{"status":"ok","mongo":"connected","redis":"connected"}`.
+- Se publico el commit `3d521f3` (`docs: update handoff after deploy`) para alinear el repo con el estado real de produccion.
+- Se verifico que el deploy posterior tambien termino `success` en GitHub Actions (run `23648977392`).
+- Se confirmo la causa del pendiente de `sync-github-board` revisando el run fallido `23647943673`: el token actual de produccion no puede acceder a Project v2 por GraphQL y devolvia `Resource not accessible by personal access token`.
+- Se ejecuto manualmente `Sync GitHub Board` (run `23649205156`) sobre el entorno real actual y el workflow nuevo funciono en modo degradado.
+- El run `23649205156` emitio los warnings esperados (`Project board unavailable...`, `Will sync issue labels only.`) y sincronizo `5/5` issues sin fallar.
+- Se verificaron ejemplos reales en GitHub: `#110` quedo `OPEN` con `status:in_progress` y `#111` quedo `OPEN` con `status:in_review`.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
-- El siguiente hilo de trabajo sigue siendo el workflow `sync-github-board`.
 - No se modifico arquitectura ni codigo de negocio.
 - El arbol ya esta preparado para commitear sin incluir `.claude/`.
 - Produccion quedo desplegada y saludable con el commit `0d03d1b`.
+- El flujo pendiente de `sync-github-board` ya quedo validado contra el token real actual de produccion.
+- Limitacion vigente: mientras el token no tenga scope `project`, el workflow solo sincronizara labels y estado de issues, no la card del Project v2.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
 2. Revisar en GitHub Actions que el run `23648857758` de `Deploy NitroCircus` figure como `success`.
 3. Ejecutar `curl http://172.233.163.22:3000/health` y confirmar respuesta saludable.
-4. Revisar `/.github/workflows/sync-github-board.yml` para confirmar que el fallback a labels-only cuando falta scope `project` siga intacto.
+4. Revisar en GitHub Actions que el run `23649205156` de `Sync GitHub Board` figure como `success`.
+5. Confirmar en los logs del run `23649205156` que aparezcan los warnings de falta de scope `project` y el resumen `Done: 5/5 synced`.
+6. Confirmar en GitHub que issues como `#110` y `#111` conserven labels de estado coherentes (`status:in_progress`, `status:in_review`).
 
 ## Siguiente paso recomendado
-Ejecutar una prueba manual del workflow `sync-github-board` con un token sin scope `project`, verificando que:
-- no falle el job
-- se actualicen labels/estado del issue
-- se registren warnings claros cuando el Project board no este disponible
+Decidir si se quiere mantener el modo degradado actual o recuperar sincronizacion completa del Project v2.
+
+Si se quiere sincronizacion completa del Project v2:
+- actualizar `GITHUB_TOKEN` de produccion con un token que tenga acceso a Projects
+- volver a ejecutar `Sync GitHub Board`
+- confirmar que desaparezcan los warnings y que tambien se muevan las cards del tablero
