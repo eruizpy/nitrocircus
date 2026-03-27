@@ -97,7 +97,10 @@ Resumen del cambio local:
   - el fallback siguio activandose (`claude failed ... trying openai`)
   - ya no se observaron `patch_apply_failed` como señal dominante en los logs inspeccionados
   - el estado en GitHub mejoro de forma fuerte: `#114`, `#115`, `#118`, `#119`, `#120`, `#122` quedaron en `status:in_review`
-  - solo `#121` (`Configuración de WhatsApp para Contacto`) sigue `status:blocked`
+  - inspeccion posterior confirmo que `#121` (`Configuración de WhatsApp para Contacto`) tambien paso a `status:in_review`
+- Evidencia puntual de `#121`:
+  - `gh issue view 121` ya devolvio `status:in_review`
+  - en logs del runner aparece `Task 69c69cc77910ce6e9ae20380 → in_review`
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -120,7 +123,7 @@ Resumen del cambio local:
 - Tras reducir el contexto del fallback, el principal limitante observable paso a ser la validez de los patches generados por el proveedor secundario.
 - Los `429` de Groq no desaparecieron por completo historicamente, pero dejaron de ser la señal dominante en el ultimo retry medido.
 - Tras agregar soporte de `files[]`, el flujo de fallback quedo mucho mas robusto y la mayoria del proyecto `cosito1` avanzo a `in_review`.
-- El pendiente operativo principal para `cosito1` queda reducido a una sola tarea bloqueada (`#121`).
+- El proyecto `cosito1` ya no tiene tareas visibles en `status:blocked` dentro de GitHub issues.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -147,7 +150,7 @@ Resumen del cambio local:
 19. Revisar en logs si persisten errores `openai:quota_exceeded`, `openai:patch_apply_failed` o `Author identity unknown`.
 20. Confirmar que la rama `feat/cosito1/crear-una-imagen-docker` exista en origin.
 21. Revisar el run `23655292185` y confirmar la reduccion de `quota_exceeded` frente a `patch_apply_failed`.
-22. Revisar el run `23655617175` y confirmar que la mayoria de `cosito1` paso a `status:in_review`.
+22. Revisar el run `23655617175` y confirmar que `cosito1` completo quedo en `status:in_review`.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -156,7 +159,7 @@ Los siguientes pasos exactos recomendados son:
 - endurecer el parser/aplicador de patch del fallback para rechazar o reparar diffs invalidos antes de `git apply`
 - validar en GitHub que los issues/tareas de `cosito1` ya promovidos a `in_review` tengan labels/board consistentes
 - siguiente foco tecnico recomendado: endurecer el contrato de salida del fallback OpenAI-compatible para forzar patches validos o introducir una etapa de saneamiento antes de `git apply`
-- siguiente foco operativo recomendado: inspeccionar especificamente por que `#121` sigue bloqueada y reintentar solo esa tarea
+- siguiente foco operativo recomendado: revisar PRs/ramas generadas y preparar la etapa de aprobacion/revision de las tareas en `in_review`
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
