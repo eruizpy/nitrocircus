@@ -176,6 +176,10 @@ Resumen del cambio local:
   - despues intenta publicar automaticamente en GitHub el paquete superior de `projects/<slug>/`
   - la metadata de `DELIVERY.json` ahora incluye `gitPublish` con resultado de esa publicacion
   - si GitHub falla, la entrega no se bloquea; el warning queda reflejado en `DELIVERY.json` y en `event_logs`
+- Se agrego una nueva guia reusable para sesiones de trabajo orientadas a estabilidad y seguridad:
+  - archivo: `docs/prompts/SESSION_STABILITY_AND_SECURITY_PROMPT.md`
+  - objetivo: evitar deriva arquitectonica en prompts de sesion y reforzar reglas operativas reales de NitroCircus
+  - foco: estado real del repo, cambios pequenos, clasificacion de errores, aislamiento del runner, integraciones degradables, secretos y deploy bajo demanda
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
