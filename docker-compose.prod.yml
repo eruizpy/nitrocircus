@@ -18,3 +18,13 @@ services:
     environment:
       NODE_ENV: production
     volumes: !reset []   # No source mounts — use built image
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - api

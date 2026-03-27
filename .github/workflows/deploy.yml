@@ -21,6 +21,7 @@ jobs:
       - run: npx tsc --noEmit -p apps/api/tsconfig.json
       - run: npx tsc --noEmit -p apps/bot/tsconfig.json
       - run: npx tsc --noEmit -p workers/agent-runner/tsconfig.json
+      - run: npx tsc --noEmit -p apps/web/tsconfig.json
 
   # ── Deploy ────────────────────────────────────────────────────────────────────
   deploy:
@@ -52,6 +53,7 @@ jobs:
             ufw allow 22/tcp    > /dev/null 2>&1 || true
             ufw allow 80/tcp    > /dev/null 2>&1 || true
             ufw allow 443/tcp   > /dev/null 2>&1 || true
+            ufw allow 3001/tcp  > /dev/null 2>&1 || true
             ufw allow 4321/tcp  > /dev/null 2>&1 || true
             ufw deny 3000/tcp   > /dev/null 2>&1 || true
             ufw deny 4322/tcp   > /dev/null 2>&1 || true
