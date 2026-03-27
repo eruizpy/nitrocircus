@@ -65,6 +65,14 @@ Resumen del cambio local:
 - Se ejecuto `Retry Blocked Tasks` (run `23654149504`) y las 9 tareas de `cosito1` se reencolaron correctamente.
 - Los logs del runner mostraron una nueva evidencia: el SDK de Claude en produccion sigue reportando el caso de cuota como `Claude Code process exited with code 1`, es decir `provider_exit`, sin exponer el texto de cuota al clasificador.
 - Se ajusto la politica de fallback para que `provider_exit` de `claude` tambien habilite fallback cuando existe proveedor secundario configurado.
+- Se desplego ese ajuste final en el commit `630397e` (`fix(runner): fallback on claude provider exit`) y el deploy `23654234713` termino `success`.
+- Se ejecuto un segundo `Retry Blocked Tasks` (run `23654320826`) para validar el comportamiento real del fallback ya desplegado.
+- Los logs del runner confirmaron la transicion esperada: aparecen mensajes `claude failed ... with provider_exit; trying openai`.
+- La validacion end-to-end mostro tres resultados reales:
+  - al menos una tarea `devops` (`Crear un Dockerfile`) llego a `in_review`
+  - varias tareas cayeron en `openai:quota_exceeded` por TPM del endpoint Groq-compatible
+  - una tarea cayo en `openai:patch_apply_failed` por diff invalido
+  - al menos un commit del fallback no pudo completarse por falta de `git user.name/user.email` global en el host (`Author identity unknown`)
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -80,6 +88,8 @@ Resumen del cambio local:
 - El repo ahora incluye soporte para fallback del runner, pero hasta desplegarlo y cargar `OPENAI_*` en produccion ese fallback aun no esta activo.
 - Produccion ya quedo con fallback activable en caliente y el runner host ya tiene las variables cargadas.
 - Queda pendiente desplegar el ajuste final que interpreta `provider_exit` de Claude como candidato a fallback y volver a reencolar las tareas para validacion definitiva.
+- La ruta de fallback ya esta validada funcionalmente en produccion: el runner deja de morir solo en `claude` y efectivamente intenta el proveedor secundario.
+- Los nuevos cuellos de botella ya no son “sin fallback”, sino capacidad/configuracion del proveedor secundario y del host git.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -102,9 +112,14 @@ Resumen del cambio local:
 15. Ejecutar el workflow `Retry Blocked Tasks` y verificar que las tareas de `cosito1` se reencolen con el runner actualizado.
 16. Si se necesita validacion inmediata antes del siguiente deploy, reiniciar manualmente el runner con `. /opt/nitrocircus/.env` y `pm2 restart nitrocircus-agents --update-env`.
 17. Confirmar en logs del runner mensajes del tipo `claude failed ... trying openai` para validar que el fallback finalmente se activa.
+18. Confirmar que la tarea `Crear un Dockerfile` o su issue asociado haya quedado en `in_review`.
+19. Revisar en logs si persisten errores `openai:quota_exceeded`, `openai:patch_apply_failed` o `Author identity unknown`.
 
 ## Siguiente paso recomendado
-Desplegar el ajuste final para `provider_exit`, ejecutar nuevamente `Retry Blocked Tasks` y confirmar en logs que el runner pasa de `claude` a `openai` sin dejar las tareas en `blocked` por cuota.
+Los siguientes pasos exactos recomendados son:
+- configurar `git config --global user.name` y `git config --global user.email` en el host para que el fallback pueda commitear sin warnings
+- reducir concurrencia o contexto del fallback para no disparar `429` de Groq TPM
+- endurecer el parser/aplicador de patch del fallback para rechazar o reparar diffs invalidos antes de `git apply`
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
