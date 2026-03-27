@@ -135,3 +135,56 @@ export async function startProjectTasks(
   }
   return started
 }
+
+/**
+ * When the Product Owner delivers a project, deployment remains optional.
+ * We normalize every non-finished task to `done` so the board and delivery
+ * snapshot reflect acceptance of the work as completed.
+ */
+export async function finalizeProjectTasksForDelivery(
+  projectId: string,
+  actorId: string,
+): Promise<Task[]> {
+  const docs = await collections.tasks()
+    .find({ projectId })
+    .sort({ createdAt: 1 })
+    .toArray()
+
+  const finalized: Task[] = []
+  for (const doc of docs) {
+    const taskId = doc._id.toHexString()
+    let current = toTask(doc)
+
+    for (const nextState of deliveryPath(current.state)) {
+      current = await transitionTask(taskId, nextState, 'telegram', actorId)
+    }
+
+    finalized.push(current)
+  }
+
+  return finalized
+}
+
+function deliveryPath(state: TaskState): TaskState[] {
+  switch (state) {
+    case 'backlog':
+      return ['planned', 'assigned', 'awaiting_start_approval', 'in_progress', 'done']
+    case 'planned':
+      return ['assigned', 'awaiting_start_approval', 'in_progress', 'done']
+    case 'assigned':
+      return ['awaiting_start_approval', 'in_progress', 'done']
+    case 'awaiting_start_approval':
+      return ['in_progress', 'done']
+    case 'in_progress':
+      return ['done']
+    case 'blocked':
+      return ['in_progress', 'done']
+    case 'in_review':
+      return ['done']
+    case 'done':
+    case 'delivered':
+      return []
+    default:
+      return []
+  }
+}

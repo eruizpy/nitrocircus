@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { createProject, getProject, transitionProject } from '../services/project'
-import { startProjectTasks, listTasksByProject, transitionTask } from '../services/task'
+import { startProjectTasks, listTasksByProject, transitionTask, finalizeProjectTasksForDelivery } from '../services/task'
 import { planProject } from '../services/pm-agent'
 import { runAgent } from '../services/agent-runner'
 import { getEpic } from '../services/epic'
@@ -154,9 +154,10 @@ async function dispatch(
       const { projectId } = payload as { projectId: string }
       const project = await getProject(projectId)
       if (!project) throw new Error(`Project not found: ${projectId}`)
+      const finalizedTasks = await finalizeProjectTasksForDelivery(projectId, actorId)
       const delivered = await transitionProject(projectId, 'delivered', 'telegram', actorId)
-      const deliveryDir = await deliverProject(project)
-      return { project: delivered, deliveryDir }
+      const deliveryDir = await deliverProject(delivered)
+      return { project: delivered, deliveryDir, finalizedTasks }
     }
 
     // ── /deploy <project> ─────────────────────────────────────

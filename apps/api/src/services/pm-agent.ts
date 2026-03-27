@@ -38,6 +38,8 @@ export interface PlanResult {
   nextAction: string
 }
 
+const VALID_EXECUTION_AGENTS = new Set<AgentType>(['frontend', 'backend', 'devops'])
+
 // ── PM Agent system prompt (from docs/prompts/PM_AGENT_PROMPT.md) ─────────────
 
 const SYSTEM_PROMPT = `Eres el Project Manager Agent de NitroCircus, especialista en desarrollo de software.
@@ -134,13 +136,14 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
     })
 
     for (const taskData of epicData.tasks ?? []) {
+      const assignedAgent = normalizeAssignedAgent(taskData, epicData)
       const task = await createTask({
         projectId: project.id,
         epicId: epic.id,
         title: taskData.title,
         description: taskData.description,
         acceptanceCriteria: taskData.acceptanceCriteria ?? [],
-        assignedAgent: taskData.assignedAgent,
+        assignedAgent,
         priority: taskData.priority ?? 'medium',
       })
       // Walk state machine: backlog → planned → assigned → awaiting_start_approval
@@ -154,7 +157,7 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
         title: taskData.title,
         description: taskData.description,
         acceptanceCriteria: taskData.acceptanceCriteria ?? [],
-        assignedAgent: taskData.assignedAgent ?? 'backend',
+        assignedAgent,
         priority: taskData.priority ?? 'medium',
         projectName: project.name,
         epicTitle: epicData.title,
@@ -195,4 +198,26 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
     risks: plan.risks ?? [],
     nextAction: plan.nextAction,
   }
+}
+
+function normalizeAssignedAgent(task: LlmTask, epic: LlmEpic): AgentType {
+  if (task.assignedAgent && VALID_EXECUTION_AGENTS.has(task.assignedAgent)) {
+    return task.assignedAgent
+  }
+
+  const haystack = [
+    task.title,
+    task.description,
+    epic.title,
+    epic.description,
+    ...(task.acceptanceCriteria ?? []),
+  ].join(' ').toLowerCase()
+
+  if (/(docker|deploy|deployment|infra|infrastructure|server|nginx|ci\/cd|ci|cd|github actions|pipeline|ssl|domain|dns)/.test(haystack)) {
+    return 'devops'
+  }
+  if (/(api|endpoint|backend|database|db|mongodb|redis|auth|authentication|authorization|webhook|queue|worker|service|crud|model)/.test(haystack)) {
+    return 'backend'
+  }
+  return 'frontend'
 }

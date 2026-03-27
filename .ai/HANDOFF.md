@@ -101,6 +101,9 @@ Resumen del cambio local:
 - Evidencia puntual de `#121`:
   - `gh issue view 121` ya devolvio `status:in_review`
   - en logs del runner aparece `Task 69c69cc77910ce6e9ae20380 → in_review`
+- Se implemento un ajuste de flujo en la API para que `/deliver` normalice todas las tareas del proyecto a `done` antes de pasar el proyecto a `delivered`.
+- Con ese cambio, la entrega deja el trabajo aceptado como completado y el deploy sigue siendo una accion separada y opcional ejecutable despues de la entrega.
+- Tambien se endurecio `planProject` para que ninguna tarea futura quede sin `assignedAgent`: si el LLM omite o invalida ese campo, NitroCircus infiere `frontend`, `backend` o `devops` por heuristica.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -124,6 +127,7 @@ Resumen del cambio local:
 - Los `429` de Groq no desaparecieron por completo historicamente, pero dejaron de ser la señal dominante en el ultimo retry medido.
 - Tras agregar soporte de `files[]`, el flujo de fallback quedo mucho mas robusto y la mayoria del proyecto `cosito1` avanzo a `in_review`.
 - El proyecto `cosito1` ya no tiene tareas visibles en `status:blocked` dentro de GitHub issues.
+- Queda pendiente desplegar y validar el nuevo flujo de entrega (`/deliver` => tareas `done`) en produccion.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -151,6 +155,7 @@ Resumen del cambio local:
 20. Confirmar que la rama `feat/cosito1/crear-una-imagen-docker` exista en origin.
 21. Revisar el run `23655292185` y confirmar la reduccion de `quota_exceeded` frente a `patch_apply_failed`.
 22. Revisar el run `23655617175` y confirmar que `cosito1` completo quedo en `status:in_review`.
+23. Tras desplegar este cambio, entregar un proyecto y confirmar que sus tareas pasan a `done` aunque no se ejecute `/deploy`.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -160,6 +165,7 @@ Los siguientes pasos exactos recomendados son:
 - validar en GitHub que los issues/tareas de `cosito1` ya promovidos a `in_review` tengan labels/board consistentes
 - siguiente foco tecnico recomendado: endurecer el contrato de salida del fallback OpenAI-compatible para forzar patches validos o introducir una etapa de saneamiento antes de `git apply`
 - siguiente foco operativo recomendado: revisar PRs/ramas generadas y preparar la etapa de aprobacion/revision de las tareas en `in_review`
+- siguiente foco operativo recomendado: desplegar este ajuste, validar `/deliver` sobre `cosito1` y confirmar que futuros `/plan` sigan generando tareas con agente asignado siempre
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista

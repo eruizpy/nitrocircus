@@ -45,3 +45,13 @@
 - Decision: en produccion se activa temporalmente el fallback `openai` usando `GROQ_API_KEY` + `OPENAI_BASE_URL=https://api.groq.com/openai/v1` + `OPENAI_MODEL=llama-3.3-70b-versatile`.
 - Motivo: hoy no existe `OPENAI_API_KEY` real en el host, pero si existe `GROQ_API_KEY` y el endpoint OpenAI-compatible ya respondio correctamente. Eso permite validar la ruta de fallback sin esperar una nueva credencial.
 - Alcance: es una solucion operativa transitoria. Los siguientes limites observados son del proveedor secundario actual: `429` por TPM, posibles patches invalidos y falta de `git user.name/user.email` global en el host para commitear cambios del fallback.
+
+## ADR-011 - Entregar proyecto normaliza tareas a `done`; deploy sigue siendo posterior y opcional
+- Decision: al ejecutar `/deliver`, el proyecto pasa a `delivered` y todas sus tareas se normalizan a `done`, sin requerir despliegue previo. La accion `/deploy` permanece disponible solo despues de la entrega y sigue siendo opcional.
+- Motivo: el flujo real mostraba proyectos entregados mientras las tareas quedaban mezcladas en `in_review` o `in_progress`, generando contradiccion entre el estado del proyecto, el board y el snapshot de entrega.
+- Alcance: aplica a la API, a la sincronizacion con GitHub/Projects y a futuros proyectos entregados desde Telegram.
+
+## ADR-012 - La planificacion siempre debe persistir tareas con agente asignado
+- Decision: `planProject` normaliza `assignedAgent` en runtime. Si el LLM lo omite o devuelve un valor invalido, NitroCircus infiere `frontend`, `backend` o `devops` por heuristica y nunca persiste una tarea sin agente de ejecucion.
+- Motivo: el flujo futuro no debe depender de que el LLM cumpla perfectamente el contrato JSON para que `/start` pueda despachar trabajo.
+- Alcance: afecta la persistencia de tareas y la creacion de issues GitHub para todos los proyectos nuevos.
