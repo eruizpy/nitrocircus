@@ -28,6 +28,9 @@ Resumen del cambio local:
 - `.claude/` no parece ser fuente de verdad del proyecto; tratarla como artefacto auxiliar salvo evidencia contraria.
 
 ## Lo hecho en esta sesion
+- Se corrigio el riesgo de frontend desalineado en NightCityVerse: el deploy ahora reescribe siempre la configuracion nginx del puerto `4321` en vez de dejarla congelada si ya existia.
+- Nginx ahora sirve `index.html` y las rutas SPA con `Cache-Control: no-store, no-cache, must-revalidate`, mientras que `/assets/` queda con cache inmutable para los bundles hasheados.
+- Se agregaron meta tags `no-cache` y una marca visible `build: live` en `apps/miniverse/index.html` para detectar rapidamente si el navegador esta mostrando una version vieja.
 - Se reconstruyo el estado del proyecto usando la evidencia real del repo.
 - Se identifico la ausencia de la capa `.ai/` como principal riesgo de continuidad.
 - Se creo la carpeta `.ai/` con memoria de proyecto, decisiones operativas y este handoff.

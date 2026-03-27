@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>NightCityVerse</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -102,6 +105,13 @@
     .po-check { color: #00d4ff; font-size: 10px; }
 
     .hud-hint { color: #555; margin-left: auto; font-size: 10px; white-space: nowrap; }
+    .build-tag {
+      color: #4d4d66;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
     kbd { background: #1a1a2e; padding: 1px 5px; border-radius: 2px; border: 1px solid #333; color: #aaa; }
 
     /* ── Canvas ───────────────────────────────────────────────────────────── */
@@ -245,6 +255,7 @@
       </div>
     </div>
 
+    <span class="build-tag">build: live</span>
     <span class="hud-hint">Press <kbd>E</kbd> to edit · <kbd>Esc</kbd> close</span>
   </div>
 
