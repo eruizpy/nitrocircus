@@ -11,7 +11,8 @@
     "dev:down": "docker compose down",
     "dev:logs": "docker compose logs -f",
     "dev:clean": "docker compose down -v",
-    "agents": "npm run dev --workspace=workers/agent-runner"
+    "agents": "npm run dev --workspace=workers/agent-runner",
+    "web": "npm run dev --workspace=apps/web"
   },
   "devDependencies": {
     "@types/node": "^22",
