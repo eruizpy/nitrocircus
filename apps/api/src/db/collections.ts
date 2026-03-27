@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb'
-import type { Project, Epic, Task, AgentRun, EventLog } from '@nitrocircus/shared'
+import type { Project, Epic, Task, AgentRun, EventLog, Product } from '@nitrocircus/shared'
 import { getDb } from './client'
 
 // Map shared entity types to MongoDB documents (string id → ObjectId _id)
@@ -10,6 +10,7 @@ export type EpicDoc     = WithObjectId<Epic>
 export type TaskDoc     = WithObjectId<Task>
 export type AgentRunDoc = WithObjectId<AgentRun>
 export type EventLogDoc = WithObjectId<EventLog>
+export type ProductDoc  = WithObjectId<Product>
 
 export const collections = {
   projects:  () => getDb().collection<ProjectDoc>('projects'),
@@ -17,6 +18,7 @@ export const collections = {
   tasks:     () => getDb().collection<TaskDoc>('tasks'),
   agentRuns: () => getDb().collection<AgentRunDoc>('agent_runs'),
   eventLogs: () => getDb().collection<EventLogDoc>('event_logs'),
+  products:  () => getDb().collection<ProductDoc>('products'),
 }
 
 export async function ensureIndexes(): Promise<void> {
@@ -29,5 +31,6 @@ export async function ensureIndexes(): Promise<void> {
     db.collection('event_logs').createIndex({ entityId: 1, createdAt: -1 }),
     db.collection('event_logs').createIndex({ entityType: 1, entityId: 1 }),
     db.collection('agent_runs').createIndex({ taskId: 1 }),
+    db.collection('products').createIndex({ name: 1 }),
   ])
 }

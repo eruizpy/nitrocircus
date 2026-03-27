@@ -4,7 +4,7 @@ import type { Project } from '../types'
 import ProjectCard from '../components/ProjectCard'
 
 interface Props {
-  onSelectProject: (id: string) => void
+  onSelectProject: (id: string, name?: string) => void
 }
 
 export default function Dashboard({ onSelectProject }: Props) {
@@ -41,18 +41,18 @@ export default function Dashboard({ onSelectProject }: Props) {
   }
 
   return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px' }}>
+    <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="flex justify-between items-center" style={{ marginBottom: 'var(--space-xl)' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.02em' }}>
-            ⚡ NitroCircus
+            Panel de Control
           </h1>
           <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
-            Panel de control · {projects.length} proyecto{projects.length !== 1 ? 's' : ''}
+            {projects.length} proyecto{projects.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="flex items-center gap-md">
           {lastRefresh && (
             <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
               {lastRefresh.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
@@ -64,9 +64,18 @@ export default function Dashboard({ onSelectProject }: Props) {
               background: 'var(--surface)',
               border: '1px solid var(--border)',
               color: 'var(--text)',
-              padding: '6px 14px',
+              padding: 'var(--space-xs) var(--space-md)',
               borderRadius: '6px',
               fontSize: '12px',
+              transition: 'all var(--transition-fast)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--surface-hover)'
+              e.currentTarget.style.borderColor = 'var(--border-hover)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--surface)'
+              e.currentTarget.style.borderColor = 'var(--border)'
             }}
           >
             Actualizar

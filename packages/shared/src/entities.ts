@@ -112,3 +112,16 @@ export interface EventLog {
   metadata?: Record<string, unknown>
   createdAt: Date
 }
+
+// ──────────────────────────────────────────────
+// Product
+// ──────────────────────────────────────────────
+
+export interface Product {
+  id: string
+  name: string
+  description: string
+  price: number
+  createdAt: Date
+  updatedAt: Date
+}
