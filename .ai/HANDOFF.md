@@ -79,6 +79,17 @@ Resumen del cambio local:
   - `Crear un Dockerfile` ya estaba llegando a `in_review`
   - `Crear una imagen Docker` llego a `in_review` y se hizo push de rama
   - siguen pendientes tareas frontend/devops afectadas por `openai:quota_exceeded` del endpoint Groq-compatible
+- Luego se aplico un tuning del fallback en el commit `55ad70c` (`tune(runner): reduce fallback context footprint`) para bajar consumo de tokens:
+  - `OPENAI_CONTEXT_LIMIT` paso a default `25000`
+  - `OPENAI_MAX_FILES=6`
+  - `OPENAI_FILE_BYTES_LIMIT=12000`
+- Ese tuning tambien se escribio explicitamente en `/opt/nitrocircus/.env` y se desplego con el run `23655211741` (`success`).
+- Se ejecuto un nuevo retry `23655292185` para medir el impacto del tuning.
+- Resultado del retry afinado:
+  - se reencolaron `7` tareas
+  - el fallback siguio activandose (`claude failed ... trying openai`)
+  - dejaron de dominar los errores `openai:quota_exceeded`
+  - el cuello principal visible paso a ser `openai:patch_apply_failed` por diffs invalidos/corruptos
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -98,6 +109,8 @@ Resumen del cambio local:
 - Los nuevos cuellos de botella ya no son “sin fallback”, sino capacidad/configuracion del proveedor secundario y del host git.
 - El cuello de botella de identidad git del host ya no bloquea el flujo.
 - El principal limitante actual es la cuota TPM del proveedor secundario Groq-compatible y, en segundo lugar, la calidad/validez de algunos patches generados por el fallback.
+- Tras reducir el contexto del fallback, el principal limitante observable paso a ser la validez de los patches generados por el proveedor secundario.
+- Los `429` de Groq no desaparecieron por completo historicamente, pero dejaron de ser la señal dominante en el ultimo retry medido.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -123,6 +136,7 @@ Resumen del cambio local:
 18. Confirmar que la tarea `Crear un Dockerfile` o su issue asociado haya quedado en `in_review`.
 19. Revisar en logs si persisten errores `openai:quota_exceeded`, `openai:patch_apply_failed` o `Author identity unknown`.
 20. Confirmar que la rama `feat/cosito1/crear-una-imagen-docker` exista en origin.
+21. Revisar el run `23655292185` y confirmar la reduccion de `quota_exceeded` frente a `patch_apply_failed`.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -130,6 +144,7 @@ Los siguientes pasos exactos recomendados son:
 - reducir concurrencia o contexto del fallback para no disparar `429` de Groq TPM
 - endurecer el parser/aplicador de patch del fallback para rechazar o reparar diffs invalidos antes de `git apply`
 - validar en GitHub que los issues/tareas de `cosito1` ya promovidos a `in_review` tengan labels/board consistentes
+- siguiente foco tecnico recomendado: endurecer el contrato de salida del fallback OpenAI-compatible para forzar patches validos o introducir una etapa de saneamiento antes de `git apply`
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
