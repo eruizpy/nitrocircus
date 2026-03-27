@@ -48,7 +48,17 @@ Resumen del cambio local:
 - Se limpio el proyecto operativo actual para reiniciar desde cero.
 - Los issues activos del proyecto `pruebas1` (`#109` a `#113`) se cerraron con comentario de reinicio operativo.
 - Se ejecuto el workflow `Reset Database` (run `23651737728`) y termino `success`.
-- Se verifico en produccion que Mongo quedo vacio: `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
+- Se verifico en ese momento que Mongo quedo vacio: `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
+- Durante la prueba E2E del nuevo proyecto `cosito1`, `/new` y `/plan` funcionaron: se creo el proyecto, se generaron issues `#114` a `#122` y se poblo GitHub Projects.
+- `/start cosito1` tambien encolo correctamente los agentes, pero todas las tareas terminaron `blocked`.
+- Se diagnostico la causa raiz en produccion: `Claude Code` estaba autenticado pero sin cuota (`You've hit your limit / Spending cap reached`), por lo que el proceso salia con codigo `1`.
+- Se verifico que Redis no era el bloqueo principal: desde el host respondia `PONG`.
+- Se comprobo que produccion no tenia `OPENAI_API_KEY`; solo existia `GROQ_API_KEY`.
+- Se implemento en codigo un fallback configurable por proveedor en `workers/agent-runner`: `claude` sigue como primario y solo intenta `openai` cuando la falla es de cuota/auth/configuracion.
+- El fallback `openai` usa `chat/completions` con patch unificado y acepta `OPENAI_BASE_URL`, por lo que soporta endpoints OpenAI-compatible.
+- Se mejoro la trazabilidad del callback `task.agent_complete` para registrar `provider`, `code`, `message` y `summary` en `event_logs`.
+- Se corrigio el workflow de deploy para hacer `source .env` antes de `pm2 restart nitrocircus-agents --update-env`, de modo que el runner host reciba variables nuevas como `OPENAI_*`.
+- Se valido operativamente que Groq puede actuar como endpoint OpenAI-compatible: una llamada real a `https://api.groq.com/openai/v1/chat/completions` con `GROQ_API_KEY` devolvio `STATUS=200` y JSON valido.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -57,8 +67,11 @@ Resumen del cambio local:
 - Produccion quedo desplegada y saludable con el commit `0d03d1b`.
 - El flujo pendiente de `sync-github-board` ya quedo validado contra el token real actual de produccion.
 - GitHub Projects v2 ya quedo funcionando de forma automatica en produccion para labels, estado de issues y movimiento de cards del board.
-- El sistema operativo quedo reiniciado desde cero: sin proyectos ni tareas activas en la base de datos.
+- El sistema operativo se reinicio limpiamente antes de la siguiente prueba E2E.
 - Los ultimos issues del proyecto activo quedaron cerrados para evitar arrastrar trabajo viejo al nuevo arranque.
+- El nuevo proyecto de prueba `cosito1` existe, esta planificado y sus tareas/issues ya fueron creados.
+- Las tareas de `cosito1` quedaron `blocked` por cuota agotada de Claude Code, no por fallo de orquestacion.
+- El repo ahora incluye soporte para fallback del runner, pero hasta desplegarlo y cargar `OPENAI_*` en produccion ese fallback aun no esta activo.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -71,10 +84,17 @@ Resumen del cambio local:
 8. Confirmar en los logs del run `23651041892` que aparezcan `Project board config loaded ✓` y `Done: 5/5 synced`, sin warnings de fallback.
 9. Revisar en GitHub Actions que el run `23651737728` de `Reset Database` figure como `success`.
 10. Verificar que los issues `#109` a `#113` figuren `CLOSED`.
-11. Verificar en produccion que Mongo tenga `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
+11. Validacion historica: tras el reset previo, Mongo llego a quedar en `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
+12. Ejecutar `npx tsc --noEmit -p workers/agent-runner/tsconfig.json` y `npx tsc --noEmit -p apps/api/tsconfig.json`.
+13. Tras desplegar este cambio, confirmar que `pm2 env nitrocircus-agents` refleje `OPENAI_*` o que los logs del runner muestren fallback explicito cuando Claude quede sin cuota.
+14. Para activacion inmediata sin credencial OpenAI nativa, configurar en `/opt/nitrocircus/.env`:
+    - `OPENAI_API_KEY=<valor de GROQ_API_KEY>`
+    - `OPENAI_BASE_URL=https://api.groq.com/openai/v1`
+    - `OPENAI_MODEL=llama-3.3-70b-versatile`
+15. Ejecutar el workflow `Retry Blocked Tasks` y verificar que las tareas de `cosito1` se reencolen con el runner actualizado.
 
 ## Siguiente paso recomendado
-Crear el nuevo proyecto desde la interfaz habitual del Product Owner para arrancar un flujo limpio, sin reutilizar tareas anteriores.
+Desplegar el soporte de fallback, cargar `OPENAI_*` en produccion y ejecutar `Retry Blocked Tasks` para reintentar las tareas de `cosito1` con fallback automatico cuando Claude vuelva a quedar sin cuota.
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista

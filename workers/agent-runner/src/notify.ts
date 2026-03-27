@@ -4,6 +4,12 @@ const MINIVERSE_URL = process.env.MINIVERSE_URL ?? null
 export async function notifyTaskState(
   taskId: string,
   state: 'in_review' | 'blocked',
+  details?: {
+    provider?: string
+    summary?: string
+    code?: string
+    message?: string
+  },
 ): Promise<void> {
   try {
     const res = await fetch(`${API_URL}/commands`, {
@@ -11,7 +17,7 @@ export async function notifyTaskState(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'task.agent_complete',
-        payload: { taskId, state },
+        payload: { taskId, state, details },
         actorId: 'agent-runner',
       }),
       signal: AbortSignal.timeout(10_000),

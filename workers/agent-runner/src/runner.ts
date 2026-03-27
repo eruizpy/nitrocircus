@@ -1,9 +1,14 @@
-import { query } from '@anthropic-ai/claude-code'
 import { execSync } from 'child_process'
 import path from 'path'
 import type { AgentTask } from './types'
 import { AGENT_CONFIGS } from './agents'
 import { notifyTaskState, emitMiniverse } from './notify'
+import {
+  getPrimaryProvider,
+  getFallbackProvider,
+  runWithProvider,
+  shouldFallback,
+} from './providers'
 
 const REPO_PATH = process.env.REPO_PATH ?? path.resolve(__dirname, '../../..')
 
@@ -28,34 +33,23 @@ export async function runAgent(task: AgentTask): Promise<void> {
   console.log(`[runner] Starting ${task.agentType} agent for task ${task.taskId}`)
   emitMiniverse('agent.online', task.agentType, task.projectName, task.title)
 
-  let success = false
-  let lastError = ''
-
   try {
     emitMiniverse('agent.thinking', task.agentType, task.projectName, task.title)
-    for await (const message of query({
-      prompt,
-      options: {
-        cwd: REPO_PATH,
-        maxTurns: config.maxTurns,
-        permissionMode: 'acceptEdits',
-        allowedTools: config.allowedTools,
-        ...(config.model ? { model: config.model } : {}),
-      },
-    })) {
-      if (message.type === 'assistant') {
-        process.stdout.write('.')
-        emitMiniverse('agent.coding', task.agentType, task.projectName, task.title)
-      }
-      if (message.type === 'result') {
-        success = !message.is_error
-        if (message.is_error) lastError = message.subtype ?? 'unknown error'
+    emitMiniverse('agent.coding', task.agentType, task.projectName, task.title)
+    const primaryProvider = getPrimaryProvider()
+    let result = await runWithProvider(primaryProvider, task, prompt, config)
+
+    if (!result.ok && result.failure && shouldFallback(result.failure)) {
+      const fallbackProvider = getFallbackProvider()
+      if (fallbackProvider) {
+        console.warn(
+          `[runner] ${primaryProvider} failed for ${task.taskId} with ${result.failure.code}; trying ${fallbackProvider}`,
+        )
+        result = await runWithProvider(fallbackProvider, task, prompt, config)
       }
     }
 
-    process.stdout.write('\n')
-
-    if (success) {
+    if (result.ok) {
       // Commit any uncommitted changes
       try {
         execSync(`git -C "${REPO_PATH}" add -A`, { stdio: 'pipe' })
@@ -70,17 +64,31 @@ export async function runAgent(task: AgentTask): Promise<void> {
       }
 
       emitMiniverse('agent.reviewing', task.agentType, task.projectName, task.title)
-      await notifyTaskState(task.taskId, 'in_review')
+      await notifyTaskState(task.taskId, 'in_review', {
+        provider: result.provider,
+        summary: result.summary,
+      })
       console.log(`[runner] Task ${task.taskId} → in_review`)
     } else {
-      console.error(`[runner] Agent reported failure: ${lastError}`)
+      const message = result.failure?.message ?? 'Unknown provider error'
+      const code = result.failure?.code ?? 'unknown'
+      const provider = result.failure?.provider ?? primaryProvider
+      console.error(`[runner] Agent reported failure [${provider}:${code}]: ${message}`)
       emitMiniverse('agent.blocked', task.agentType, task.projectName, task.title)
-      await notifyTaskState(task.taskId, 'blocked')
+      await notifyTaskState(task.taskId, 'blocked', {
+        provider,
+        code,
+        message,
+      })
     }
   } catch (err) {
     console.error(`[runner] Unexpected error for ${task.taskId}:`, err)
     emitMiniverse('agent.blocked', task.agentType, task.projectName, task.title)
-    await notifyTaskState(task.taskId, 'blocked')
+    await notifyTaskState(task.taskId, 'blocked', {
+      provider: getPrimaryProvider(),
+      code: 'unknown',
+      message: err instanceof Error ? err.message : String(err),
+    })
   }
 }
 

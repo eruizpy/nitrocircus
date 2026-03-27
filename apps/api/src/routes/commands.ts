@@ -7,6 +7,7 @@ import { getEpic } from '../services/epic'
 import { deliverProject } from '../services/delivery'
 import { queueDeployTask } from '../services/agent-runner'
 import { transcribeAudio } from '../services/transcription'
+import { logEvent } from '../services/event-log'
 
 interface CommandBody {
   type: string
@@ -105,14 +106,41 @@ async function dispatch(
     }
 
     // ── agent → task state callback ───────────────────────────
-    // Called by the agent-runner worker after Claude Code finishes.
+    // Called by the agent-runner worker after the execution provider finishes.
     case 'task.agent_complete': {
-      const { taskId, state } = payload as { taskId: string; state: 'in_review' | 'blocked' }
+      const { taskId, state, details } = payload as {
+        taskId: string
+        state: 'in_review' | 'blocked'
+        details?: {
+          provider?: string
+          summary?: string
+          code?: string
+          message?: string
+        }
+      }
       // Deploy tasks (taskId: 'deploy-<projectId>') have no MongoDB task record
       if (taskId.startsWith('deploy-')) {
         return { taskId, state, note: 'deploy task — no state transition needed' }
       }
-      return transitionTask(taskId, state, 'system', actorId)
+      const task = await transitionTask(taskId, state, 'system', actorId)
+      if (details && (details.provider || details.code || details.message || details.summary)) {
+        await logEvent({
+          entityType: 'task',
+          entityId: taskId,
+          event: state === 'blocked' ? 'agent.failed' : 'agent.completed',
+          actorType: 'system',
+          actorId,
+          metadata: {
+            provider: details.provider,
+            summary: details.summary,
+            code: details.code,
+            message: details.message,
+            state,
+            projectId: task.projectId,
+          },
+        })
+      }
+      return task
     }
 
     // ── /approve <task-id> ────────────────────────────────────

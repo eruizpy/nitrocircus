@@ -35,3 +35,8 @@
 - Decision: la automatizacion completa de GitHub Projects v2 depende de un `GITHUB_TOKEN` con scope `project`, y la configuracion operativa debe declarar `GITHUB_OWNER`, `GITHUB_REPO` y `GITHUB_PROJECT_NUMBER` sin comentarios inline en el valor.
 - Motivo: durante la validacion real se comprobo que el fallback labels-only funcionaba, pero la sincronizacion completa del Project fallaba por dos causas de configuracion: token sin scope `project` y `GITHUB_REPO` malformado por un comentario inline en `.env`.
 - Alcance: aplica a produccion, a futuros despliegues y a la documentacion de ejemplo del repositorio.
+
+## ADR-009 - Fallback del runner solo por cuota/auth del proveedor primario
+- Decision: el `agent-runner` mantiene `claude` como proveedor primario y solo intenta fallback `openai` cuando la falla del primario es clasificable como cuota agotada, auth faltante o configuracion ausente. El fallback usa interfaz OpenAI-compatible (`OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`) para permitir tanto OpenAI nativo como proveedores compatibles.
+- Motivo: el incidente real de `/start cosito1` no fue una falla de Redis sino `Claude Code` sin cuota (`spending cap reached`). Se necesita evitar stoppers por credenciales/cuota sin ocultar errores estructurales del runner detras de otro proveedor.
+- Alcance: no hay fallback para errores genericos de git, patch o infraestructura; esos siguen marcandose como `blocked` con razon explicita. El deploy debe cargar `.env` antes de reiniciar `pm2` para que el runner host reciba estas variables nuevas.
