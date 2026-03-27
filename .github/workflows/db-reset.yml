@@ -19,7 +19,7 @@ jobs:
           script: |
             set -e
             cd /opt/nitrocircus
-            source .env 2>/dev/null || true
+            set -a; source .env 2>/dev/null || true; set +a
             MONGO_USER=${MONGO_USER:-nitro}
             MONGO_PASS=${MONGO_PASS:-nitro}
             MONGO_DB=${MONGO_DB:-nitrocircus}
