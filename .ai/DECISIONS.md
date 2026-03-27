@@ -30,3 +30,8 @@
 - Decision: `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md` pasan a ser la capa minima de continuidad entre sesiones, sin reemplazar la documentacion arquitectonica existente en `docs/`.
 - Motivo: al iniciar esta sesion no existia la estructura `.ai/` requerida por el flujo, lo que obligaba a reconstruir contexto desde archivos dispersos y aumentaba el riesgo de contradicciones entre agentes.
 - Alcance: `.ai/` resume estado vivo y handoff operativo; `docs/` mantiene decisiones y documentacion de producto/arquitectura de mas largo plazo.
+
+## ADR-008 - GitHub Projects v2 requiere token con scope `project` y configuracion explicita
+- Decision: la automatizacion completa de GitHub Projects v2 depende de un `GITHUB_TOKEN` con scope `project`, y la configuracion operativa debe declarar `GITHUB_OWNER`, `GITHUB_REPO` y `GITHUB_PROJECT_NUMBER` sin comentarios inline en el valor.
+- Motivo: durante la validacion real se comprobo que el fallback labels-only funcionaba, pero la sincronizacion completa del Project fallaba por dos causas de configuracion: token sin scope `project` y `GITHUB_REPO` malformado por un comentario inline en `.env`.
+- Alcance: aplica a produccion, a futuros despliegues y a la documentacion de ejemplo del repositorio.

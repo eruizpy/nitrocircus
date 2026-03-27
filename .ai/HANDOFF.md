@@ -41,6 +41,10 @@ Resumen del cambio local:
 - Se ejecuto manualmente `Sync GitHub Board` (run `23649205156`) sobre el entorno real actual y el workflow nuevo funciono en modo degradado.
 - El run `23649205156` emitio los warnings esperados (`Project board unavailable...`, `Will sync issue labels only.`) y sincronizo `5/5` issues sin fallar.
 - Se verificaron ejemplos reales en GitHub: `#110` quedo `OPEN` con `status:in_progress` y `#111` quedo `OPEN` con `status:in_review`.
+- Se amplio el token local de GitHub CLI con scope `project`.
+- Se detecto y corrigio en produccion una configuracion defectuosa en `/opt/nitrocircus/.env`: `GITHUB_REPO` tenia un comentario inline en el valor y faltaba `GITHUB_PROJECT_NUMBER=1`.
+- Se actualizo en produccion `GITHUB_TOKEN` al token con scope `project` y se verifico por huella que ya coincide con el token activo de `gh auth token`.
+- Se ejecuto nuevamente `Sync GitHub Board` y el run `23651041892` cargo la configuracion del board (`Project board config loaded ✓`) y sincronizo `5/5` tareas sin fallback ni warnings.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -48,7 +52,7 @@ Resumen del cambio local:
 - El arbol ya esta preparado para commitear sin incluir `.claude/`.
 - Produccion quedo desplegada y saludable con el commit `0d03d1b`.
 - El flujo pendiente de `sync-github-board` ya quedo validado contra el token real actual de produccion.
-- Limitacion vigente: mientras el token no tenga scope `project`, el workflow solo sincronizara labels y estado de issues, no la card del Project v2.
+- GitHub Projects v2 ya quedo funcionando de forma automatica en produccion para labels, estado de issues y movimiento de cards del board.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -57,11 +61,12 @@ Resumen del cambio local:
 4. Revisar en GitHub Actions que el run `23649205156` de `Sync GitHub Board` figure como `success`.
 5. Confirmar en los logs del run `23649205156` que aparezcan los warnings de falta de scope `project` y el resumen `Done: 5/5 synced`.
 6. Confirmar en GitHub que issues como `#110` y `#111` conserven labels de estado coherentes (`status:in_progress`, `status:in_review`).
+7. Revisar en GitHub Actions que el run `23651041892` de `Sync GitHub Board` figure como `success`.
+8. Confirmar en los logs del run `23651041892` que aparezcan `Project board config loaded ✓` y `Done: 5/5 synced`, sin warnings de fallback.
 
 ## Siguiente paso recomendado
-Decidir si se quiere mantener el modo degradado actual o recuperar sincronizacion completa del Project v2.
+Verificar visualmente en GitHub Projects que las cards de las tareas sincronizadas reflejen el estado esperado del campo `Status` despues del run `23651041892`.
 
-Si se quiere sincronizacion completa del Project v2:
-- actualizar `GITHUB_TOKEN` de produccion con un token que tenga acceso a Projects
-- volver a ejecutar `Sync GitHub Board`
-- confirmar que desaparezcan los warnings y que tambien se muevan las cards del tablero
+Como endurecimiento adicional:
+- agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
+- considerar una comprobacion de configuracion al inicio del script para fallar rapido si `GITHUB_REPO` incluye espacios o comentarios inline
