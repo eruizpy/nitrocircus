@@ -9,7 +9,9 @@ import type { AgentConfig } from './agents'
 const REPO_PATH = process.env.REPO_PATH ?? path.resolve(__dirname, '../../..')
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL ?? 'https://api.openai.com/v1').replace(/\/+$/, '')
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? 'gpt-4.1-mini'
-const OPENAI_CONTEXT_LIMIT = Number(process.env.OPENAI_CONTEXT_LIMIT ?? 120_000)
+const OPENAI_CONTEXT_LIMIT = Number(process.env.OPENAI_CONTEXT_LIMIT ?? 25_000)
+const OPENAI_MAX_FILES = Number(process.env.OPENAI_MAX_FILES ?? 6)
+const OPENAI_FILE_BYTES_LIMIT = Number(process.env.OPENAI_FILE_BYTES_LIMIT ?? 12_000)
 
 export type AgentProvider = 'claude' | 'openai'
 
@@ -303,19 +305,22 @@ function collectRepoContext(allowedPaths: string[]): string {
   const roots = [...new Set(allowedPaths.map((pattern) => pattern.replace(/\/\*\*$/, '')))]
   const snippets: string[] = []
   let size = 0
+  let filesIncluded = 0
 
   for (const root of roots) {
     const files = listTrackedFiles(root)
     for (const relPath of files) {
+      if (filesIncluded >= OPENAI_MAX_FILES) return snippets.join('\n')
       const absPath = path.join(REPO_PATH, relPath)
       if (!fs.existsSync(absPath)) continue
       const stat = fs.statSync(absPath)
-      if (!stat.isFile() || stat.size > 50_000) continue
-      const text = fs.readFileSync(absPath, 'utf8')
+      if (!stat.isFile() || stat.size > OPENAI_FILE_BYTES_LIMIT) continue
+      const text = fs.readFileSync(absPath, 'utf8').slice(0, OPENAI_FILE_BYTES_LIMIT)
       const chunk = `FILE ${relPath}\n${text}\n`
       if (size + chunk.length > OPENAI_CONTEXT_LIMIT) return snippets.join('\n')
       snippets.push(chunk)
       size += chunk.length
+      filesIncluded += 1
     }
   }
 
@@ -325,10 +330,25 @@ function collectRepoContext(allowedPaths: string[]): string {
 function listTrackedFiles(root: string): string[] {
   try {
     const output = execFileSync('git', ['-C', REPO_PATH, 'ls-files', root], { encoding: 'utf8' })
-    return output.split('\n').map((line) => line.trim()).filter(Boolean)
+    return output
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort((a, b) => filePriority(a) - filePriority(b) || a.length - b.length || a.localeCompare(b))
   } catch {
     return []
   }
+}
+
+function filePriority(relPath: string): number {
+  if (relPath.endsWith('/package.json') || relPath === 'package.json') return 0
+  if (relPath.endsWith('/tsconfig.json') || relPath === 'tsconfig.json') return 1
+  if (relPath.endsWith('.ts') || relPath.endsWith('.tsx')) return 2
+  if (relPath.endsWith('.js') || relPath.endsWith('.jsx')) return 3
+  if (relPath.endsWith('.json')) return 4
+  if (relPath.endsWith('.css')) return 5
+  if (relPath.endsWith('.md')) return 6
+  return 7
 }
 
 function applyUnifiedDiff(patch: string): void {
