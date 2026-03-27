@@ -1,47 +1,23 @@
 import React from 'react';
-import { api } from '../api';
-import { Project, Task } from '../types';
+import './ProjectDetail.css';
 
-interface Props {
+interface ProjectDetailProps {
   id: string;
   onBack: () => void;
 }
 
-const ProjectDetail = ({ id, onBack }: Props) => {
-  const [project, setProject] = React.useState<Project | null>(null);
-  const [tasks, setTasks] = React.useState<Task[]>([]);
-
-  React.useEffect(() => {
-    const fetchProject = async () => {
-      const project = await api.project(id);
-      setProject(project);
-    };
-    fetchProject();
-  }, [id]);
-
-  React.useEffect(() => {
-    const fetchTasks = async () => {
-      if (project) {
-        const tasks = await api.projectTasks(project.id);
-        setTasks(tasks);
-      }
-    };
-    fetchTasks();
-  }, [project]);
-
-  if (!project) return <div>Loading...</div>;
+const ProjectDetail = ({ id, onBack }: ProjectDetailProps) => {
+  const handleWhatsAppClick = () => {
+    const message = 'Hola, estoy interesado en obtener más información sobre el proyecto.';
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <div>
-      <h1>{project.name}</h1>
-      <p>{project.description}</p>
-      <h2>Tasks</h2>
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.id}>{task.title}</li>
-        ))}
-      </ul>
-      <button onClick={onBack}>Back</button>
+      <h1>Detalle del Proyecto {id}</h1>
+      <button onClick={handleWhatsAppClick}>Contactar por WhatsApp</button>
+      <button onClick={onBack}>Volver</button>
     </div>
   );
 };
