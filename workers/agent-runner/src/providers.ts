@@ -29,6 +29,12 @@ export interface ProviderRunResult {
   failure?: ProviderFailure
 }
 
+interface OpenAIFileEdit {
+  path: string
+  content?: string
+  delete?: boolean
+}
+
 export function getPrimaryProvider(): AgentProvider {
   return normalizeProvider(process.env.AGENT_PRIMARY_PROVIDER, 'claude')
 }
@@ -146,10 +152,12 @@ async function runWithOpenAI(
   const system = [
     'You are a senior software engineer working inside the NitroCircus monorepo.',
     'Return strictly valid JSON.',
-    'If changes are needed, return a unified diff in `patch` rooted at repository root.',
+    'Prefer returning `files`, an array of full-file edits rooted at repository root.',
+    'Each file edit must be { "path": "...", "content": "..." } or { "path": "...", "delete": true }.',
+    'Only use `patch` as a fallback if you cannot express the change with `files`.',
     'Modify only files that match the allowed paths.',
     'Do not include markdown fences.',
-    'If no safe change is possible, return {"summary":"...","commitMessage":"...","patch":"","blockedReason":"..."}',
+    'If no safe change is possible, return {"summary":"...","commitMessage":"...","files":[],"patch":"","blockedReason":"..."}',
   ].join(' ')
 
   const user = [
@@ -215,9 +223,21 @@ async function runWithOpenAI(
     }
   }
 
-  let parsed: { summary?: string; commitMessage?: string; patch?: string; blockedReason?: string }
+  let parsed: {
+    summary?: string
+    commitMessage?: string
+    patch?: string
+    files?: OpenAIFileEdit[]
+    blockedReason?: string
+  }
   try {
-    parsed = JSON.parse(content) as { summary?: string; commitMessage?: string; patch?: string; blockedReason?: string }
+    parsed = JSON.parse(content) as {
+      summary?: string
+      commitMessage?: string
+      patch?: string
+      files?: OpenAIFileEdit[]
+      blockedReason?: string
+    }
   } catch (err) {
     return {
       ok: false,
@@ -228,6 +248,29 @@ async function runWithOpenAI(
         message: `Invalid OpenAI JSON payload: ${stringifyError(err)}`,
         retryable: true,
       },
+    }
+  }
+
+  const files = Array.isArray(parsed.files) ? parsed.files : []
+  if (files.length > 0) {
+    try {
+      applyFileEdits(files, config.allowedPaths)
+      return {
+        ok: true,
+        provider: 'openai',
+        summary: parsed.summary?.trim() || 'Fallback OpenAI file edits applied',
+      }
+    } catch (err) {
+      return {
+        ok: false,
+        provider: 'openai',
+        failure: {
+          provider: 'openai',
+          code: 'patch_apply_failed',
+          message: stringifyError(err),
+          retryable: false,
+        },
+      }
     }
   }
 
@@ -361,6 +404,47 @@ function applyUnifiedDiff(patch: string): void {
   } finally {
     fs.unlinkSync(tmpPath)
   }
+}
+
+function applyFileEdits(edits: OpenAIFileEdit[], allowedPaths: string[]): void {
+  for (const edit of edits) {
+    const relPath = normalizeRelativePath(edit.path)
+    if (!relPath) throw new Error('File edit is missing a valid path')
+    if (!isAllowedPath(relPath, allowedPaths)) {
+      throw new Error(`Fallback tried to modify disallowed path: ${relPath}`)
+    }
+
+    const absPath = path.join(REPO_PATH, relPath)
+    if (!absPath.startsWith(`${REPO_PATH}${path.sep}`) && absPath !== path.join(REPO_PATH, relPath)) {
+      throw new Error(`Resolved path escapes repository root: ${relPath}`)
+    }
+
+    if (edit.delete) {
+      if (fs.existsSync(absPath)) fs.unlinkSync(absPath)
+      continue
+    }
+
+    if (typeof edit.content !== 'string') {
+      throw new Error(`Fallback file edit for ${relPath} is missing content`)
+    }
+
+    fs.mkdirSync(path.dirname(absPath), { recursive: true })
+    fs.writeFileSync(absPath, edit.content, 'utf8')
+  }
+}
+
+function normalizeRelativePath(rawPath: string | undefined): string | null {
+  if (!rawPath) return null
+  const normalized = rawPath.replace(/\\/g, '/').replace(/^\.?\//, '')
+  if (!normalized || normalized.startsWith('..') || normalized.includes('/../')) return null
+  return normalized
+}
+
+function isAllowedPath(relPath: string, allowedPaths: string[]): boolean {
+  return allowedPaths.some((pattern) => {
+    const prefix = pattern.replace(/\/\*\*$/, '')
+    return relPath === prefix || relPath.startsWith(`${prefix}/`)
+  })
 }
 
 function stringifyError(err: unknown): string {
