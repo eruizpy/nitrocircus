@@ -1,3 +1,4 @@
+import fs from 'fs/promises'
 import type { TaskState, Priority } from '@nitrocircus/shared'
 
 // ── Config helpers ─────────────────────────────────────────────────────────────
@@ -8,6 +9,29 @@ function ghConfig() {
   const repo  = process.env.GITHUB_REPO
   if (!token || !owner || !repo) return null
   return { token, owner, repo }
+}
+
+export async function downloadRepoArchive(ref: string, destinationPath: string): Promise<void> {
+  const cfg = ghConfig()
+  if (!cfg) throw new Error('GitHub not configured')
+
+  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/zipball/${encodeURIComponent(ref)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${cfg.token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+    redirect: 'follow',
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`GitHub archive ${ref} -> ${res.status}: ${text}`)
+  }
+
+  const buffer = Buffer.from(await res.arrayBuffer())
+  await fs.writeFile(destinationPath, buffer)
 }
 
 // ── GraphQL helper ────────────────────────────────────────────────────────────

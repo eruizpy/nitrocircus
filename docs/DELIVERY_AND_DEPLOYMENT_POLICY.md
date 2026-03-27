@@ -16,12 +16,19 @@ Todo proyecto culminado deberá considerarse **entregado en estado no productivo
 
 ## Contenido mínimo del proyecto entregado
 - código fuente
+- paquete `.zip` autocontenido dentro de `/projects/<nombre-del-proyecto>`
 - README del proyecto
 - instrucciones de ejecución
 - variables de entorno requeridas
 - notas técnicas
 - estado funcional actual
 - pendientes/riesgos
+
+## Formato esperado del paquete de entrega
+- carpeta `/projects/<nombre-del-proyecto>/`
+- archivo `<nombre-del-proyecto>.zip` con todo el bundle exportado
+- documentación operativa (`README.md`, `TASKS.md`, `RUNBOOK.md`, `DELIVERY.json`)
+- snapshot base del repo y export de branches de tarea cuando existan entregables de agentes
 
 ## Regla de despliegue bajo demanda
 Solo cuando el Product Owner lo ordene, el DevOps Agent debe:

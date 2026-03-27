@@ -12,7 +12,8 @@ services:
   api:
     environment:
       NODE_ENV: production
-    volumes: !reset []   # No source mounts — use built image
+    volumes:
+      - ./projects:/app/projects
 
   bot:
     environment:
