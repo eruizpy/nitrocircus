@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    networks:
+      - landing-network
+
+networks:
+  landing-network:
+    driver: bridge
