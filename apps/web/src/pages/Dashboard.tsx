@@ -1,12 +1,13 @@
 import React from 'react';
-import './Dashboard.css';
+import Gallery from '../components/Gallery';
+import Contact from '../components/Contact';
 
 const Dashboard = () => {
   return (
-    <div className="dashboard">
-      <h1>Bienvenido a la Landing Page</h1>
-      <p>Esta es la página de inicio de nuestra aplicación.</p>
-      <button className="btn-whatsapp">Contactar a través de WhatsApp</button>
+    <div>
+      <h1>Landing Page</h1>
+      <Gallery />
+      <Contact />
     </div>
   );
 };

@@ -1,23 +1,16 @@
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
+body {
+  font-family: Arial, sans-serif;
 }
 
-.dashboard h1 {
-  font-size: 36px;
-  margin-bottom: 20px;
+img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  margin: 10px;
 }
 
-.dashboard p {
-  font-size: 18px;
-  margin-bottom: 40px;
-}
-
-.btn-whatsapp {
-  background-color: #25D366;
+button {
+  background-color: #4CAF50;
   color: #fff;
   padding: 10px 20px;
   border: none;
@@ -25,20 +18,6 @@
   cursor: pointer;
 }
 
-.project-detail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
-
-.project-detail h1 {
-  font-size: 36px;
-  margin-bottom: 20px;
-}
-
-.project-detail p {
-  font-size: 18px;
-  margin-bottom: 40px;
+button:hover {
+  background-color: #3e8e41;
 }
