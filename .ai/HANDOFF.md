@@ -171,6 +171,11 @@ Resumen del cambio local:
   - el bundle local incluye `README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example`, `DELIVERY.json` y `cosito2.zip`
   - se formalizo la regla de que `projects/<slug>/` tambien debe versionarse en Git para que el equipo vea localmente el entregable real
   - queda abierta una tarea explicita para automatizar mejor esta sincronizacion al momento de entrega, sabiendo que la copia al checkout local del operador requiere `git pull` o un agente local y no puede forzarse desde produccion por si sola
+- Se implemento luego la automatizacion real en `/deliver`:
+  - el API ahora genera primero el bundle local del proyecto
+  - despues intenta publicar automaticamente en GitHub el paquete superior de `projects/<slug>/`
+  - la metadata de `DELIVERY.json` ahora incluye `gitPublish` con resultado de esa publicacion
+  - si GitHub falla, la entrega no se bloquea; el warning queda reflejado en `DELIVERY.json` y en `event_logs`
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.

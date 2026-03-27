@@ -6,7 +6,7 @@ import type { Project, Epic, Task, AgentType } from '@nitrocircus/shared'
 import { listEpicsByProject } from './epic'
 import { listTasksByProject } from './task'
 import { logEvent } from './event-log'
-import { downloadRepoArchive, taskBranchName } from './github'
+import { downloadRepoArchive, publishDeliveryBundleToGitHub, taskBranchName, type DeliveryPublishResult } from './github'
 
 const execFileAsync = promisify(execFile)
 
@@ -32,6 +32,33 @@ interface DeliveryBundle {
   sourceRef: string
   artifacts: DeliveryArtifact[]
   warnings: string[]
+}
+
+interface DeliveryManifest {
+  projectId: string
+  projectName: string
+  slug: string
+  deliveredAt: string
+  epicCount: number
+  taskCount: number
+  archiveName: string
+  sourceRef: string
+  warnings: string[]
+  artifacts: DeliveryArtifact[]
+  tasks: {
+    id: string
+    title: string
+    state: string
+    agent?: AgentType
+    branch: string
+    issue?: number
+  }[]
+  gitPublish?: {
+    published: boolean
+    files: string[]
+    commitMessage: string
+    error?: string
+  }
 }
 
 function slugify(name: string): string {
@@ -379,36 +406,19 @@ export async function deliverProject(project: Project): Promise<string> {
     fs.writeFile(path.join(dir, '.env.example'), buildEnvExample(project, bundle)),
     fs.writeFile(path.join(dir, 'RUNBOOK.md'), buildRunbook(project, bundle)),
     fs.writeFile(path.join(dir, 'ARTIFACTS.md'), buildArtifactsDoc(project, tasks, bundle)),
-    fs.writeFile(
-      path.join(dir, 'DELIVERY.json'),
-      JSON.stringify(
-        {
-          projectId: project.id,
-          projectName: project.name,
-          slug,
-          deliveredAt: new Date().toISOString(),
-          epicCount: epics.length,
-          taskCount: tasks.length,
-          archiveName: bundle.archiveName,
-          sourceRef: bundle.sourceRef,
-          warnings: bundle.warnings,
-          artifacts: bundle.artifacts,
-          tasks: tasks.map((task) => ({
-            id: task.id,
-            title: task.title,
-            state: task.state,
-            agent: task.assignedAgent,
-            branch: resolveTaskBranch(task, project.name),
-            issue: task.githubIssueNumber,
-          })),
-        },
-        null,
-        2,
-      ),
-    ),
   ])
 
   const archivePath = await createZipArchive(dir, bundle.archiveName)
+  const manifestBase = buildDeliveryManifest(project, epics.length, tasks, bundle, slug)
+  await writeDeliveryManifest(dir, manifestBase)
+
+  const publishResult = await publishDeliveryBundleToGitHub(project.name, dir)
+  const finalManifest = buildDeliveryManifest(project, epics.length, tasks, bundle, slug, publishResult)
+  await writeDeliveryManifest(dir, finalManifest)
+
+  if (publishResult.published) {
+    await publishDeliveryBundleToGitHub(project.name, dir, ['DELIVERY.json'])
+  }
 
   await logEvent({
     entityType: 'project',
@@ -424,8 +434,58 @@ export async function deliverProject(project: Project): Promise<string> {
       epicCount: epics.length,
       artifactCount: bundle.artifacts.length,
       warnings: bundle.warnings,
+      gitPublish: publishResult,
     },
   })
 
   return dir
+}
+
+function buildDeliveryManifest(
+  project: Project,
+  epicCount: number,
+  tasks: Task[],
+  bundle: DeliveryBundle,
+  slug: string,
+  publishResult?: DeliveryPublishResult,
+): DeliveryManifest {
+  const warnings = [...bundle.warnings]
+  if (publishResult && !publishResult.published && publishResult.error) {
+    warnings.push(`No se pudo versionar automaticamente el bundle en GitHub: ${publishResult.error}`)
+  }
+
+  return {
+    projectId: project.id,
+    projectName: project.name,
+    slug,
+    deliveredAt: new Date().toISOString(),
+    epicCount,
+    taskCount: tasks.length,
+    archiveName: bundle.archiveName,
+    sourceRef: bundle.sourceRef,
+    warnings,
+    artifacts: bundle.artifacts,
+    tasks: tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      state: task.state,
+      agent: task.assignedAgent,
+      branch: resolveTaskBranch(task, project.name),
+      issue: task.githubIssueNumber,
+    })),
+    gitPublish: publishResult ? {
+      published: publishResult.published,
+      files: publishResult.files,
+      commitMessage: publishResult.commitMessage,
+      error: publishResult.error,
+    } : {
+      published: false,
+      files: [],
+      commitMessage: '',
+    },
+  }
+}
+
+async function writeDeliveryManifest(dir: string, manifest: DeliveryManifest): Promise<void> {
+  await fs.writeFile(path.join(dir, 'DELIVERY.json'), JSON.stringify(manifest, null, 2))
 }

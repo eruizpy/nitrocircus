@@ -1,4 +1,5 @@
 import fs from 'fs/promises'
+import path from 'path'
 import type { TaskState, Priority } from '@nitrocircus/shared'
 
 // ── Config helpers ─────────────────────────────────────────────────────────────
@@ -186,6 +187,32 @@ async function ghFetch<T = unknown>(
     throw new Error(`GitHub ${method} ${path} → ${res.status}: ${text}`)
   }
   return res.json() as Promise<T>
+}
+
+async function ghFetchMaybe<T = unknown>(
+  path: string,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE' | 'PUT',
+  body?: unknown,
+): Promise<{ ok: true; data: T } | { ok: false; status: number; text: string }> {
+  const cfg = ghConfig()
+  if (!cfg) throw new Error('GitHub not configured')
+
+  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${cfg.token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+
+  if (!res.ok) {
+    return { ok: false, status: res.status, text: await res.text() }
+  }
+
+  return { ok: true, data: await res.json() as T }
 }
 
 // ── Label helpers ──────────────────────────────────────────────────────────────
@@ -380,5 +407,86 @@ export async function syncTaskIssueState(
     await updateProjectItemStatus(projectItemId, newState).catch((err) =>
       console.warn('[github] Project board update failed:', err instanceof Error ? err.message : err),
     )
+  }
+}
+
+export interface DeliveryPublishResult {
+  published: boolean
+  files: string[]
+  commitMessage: string
+  error?: string
+}
+
+async function getContentSha(repoPath: string): Promise<string | null> {
+  const res = await ghFetchMaybe<{ sha: string }>(`/contents/${encodeURIComponent(repoPath)}`, 'GET')
+  if (!res.ok) {
+    if (res.status === 404) return null
+    throw new Error(`GitHub GET /contents/${repoPath} -> ${res.status}: ${res.text}`)
+  }
+  return res.data.sha
+}
+
+async function upsertRepoFile(repoPath: string, localPath: string, message: string): Promise<void> {
+  const content = await fs.readFile(localPath)
+  const sha = await getContentSha(repoPath)
+
+  await ghFetch(`/contents/${encodeURIComponent(repoPath)}`, 'PUT', {
+    message,
+    content: content.toString('base64'),
+    branch: 'main',
+    ...(sha ? { sha } : {}),
+  })
+}
+
+export async function publishDeliveryBundleToGitHub(
+  _projectName: string,
+  deliveryDir: string,
+  filenames?: string[],
+): Promise<DeliveryPublishResult> {
+  if (!ghConfig()) {
+    return {
+      published: false,
+      files: [],
+      commitMessage: '',
+      error: 'GitHub not configured',
+    }
+  }
+
+  const slug = path.basename(deliveryDir)
+  const archiveName = `${slug}.zip`
+  const topLevelFiles = filenames ?? [
+    '.env.example',
+    'ARTIFACTS.md',
+    'DELIVERY.json',
+    'README.md',
+    'RUNBOOK.md',
+    'TASKS.md',
+    archiveName,
+  ]
+
+  const publishedFiles: string[] = []
+  const commitMessage = `delivery(${slug}): publish delivery bundle`
+
+  try {
+    for (const filename of topLevelFiles) {
+      const localPath = path.join(deliveryDir, filename)
+      await fs.access(localPath)
+      const repoPath = `projects/${slug}/${filename}`
+      await upsertRepoFile(repoPath, localPath, commitMessage)
+      publishedFiles.push(repoPath)
+    }
+
+    return {
+      published: true,
+      files: publishedFiles,
+      commitMessage,
+    }
+  } catch (error) {
+    return {
+      published: false,
+      files: publishedFiles,
+      commitMessage,
+      error: error instanceof Error ? error.message : String(error),
+    }
   }
 }

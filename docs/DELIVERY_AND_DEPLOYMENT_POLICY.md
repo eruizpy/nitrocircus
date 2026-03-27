@@ -30,6 +30,7 @@ Todo proyecto culminado deberá considerarse **entregado en estado no productivo
 - archivo `<nombre-del-proyecto>.zip` con todo el bundle exportado
 - documentación operativa (`README.md`, `TASKS.md`, `RUNBOOK.md`, `DELIVERY.json`)
 - snapshot base del repo y export de branches de tarea cuando existan entregables de agentes
+- publicación automática del paquete superior en `main` cuando GitHub esté configurado
 
 ## Regla de despliegue bajo demanda
 Solo cuando el Product Owner lo ordene, el DevOps Agent debe:

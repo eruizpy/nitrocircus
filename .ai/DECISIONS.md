@@ -80,3 +80,8 @@
 - Decision: el flujo de entrega debe dejar el bundle listo para versionarse en Git, pero no debe asumir que puede actualizar automaticamente el checkout local del operador desde el servidor.
 - Motivo: la entrega puede automatizar la generacion y publicacion del bundle, pero la copia efectiva al equipo del usuario requiere `git pull` o un proceso local con permisos sobre esa maquina.
 - Alcance: se registra como tarea operativa mejorar la sincronizacion local, pero la falta de ese paso no debe bloquear `done`, `delivered` ni el deploy opcional posterior.
+
+## ADR-018 - `/deliver` publica automaticamente el bundle superior en `main`
+- Decision: al entregar un proyecto, NitroCircus debe intentar publicar automaticamente en GitHub el bundle superior de `projects/<slug>/`: `README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example`, `DELIVERY.json` y `<slug>.zip`.
+- Motivo: esto mantiene el repo central actualizado con el entregable real sin depender de una copia manual posterior desde produccion ni de subir por API miles de archivos internos del snapshot expandido.
+- Alcance: la publicacion es best-effort. Si GitHub no esta configurado o falla el update, la entrega sigue completando y el error queda reflejado en `DELIVERY.json` y en eventos del proyecto.
