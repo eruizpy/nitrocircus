@@ -1,17 +1,47 @@
 import React from 'react';
-import './ProjectDetail.css';
+import { api } from '../api';
+import { Project, Task } from '../types';
 
-interface ProjectDetailProps {
+interface Props {
   id: string;
   onBack: () => void;
 }
 
-const ProjectDetail = ({ id, onBack }: ProjectDetailProps) => {
+const ProjectDetail = ({ id, onBack }: Props) => {
+  const [project, setProject] = React.useState<Project | null>(null);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+
+  React.useEffect(() => {
+    const fetchProject = async () => {
+      const project = await api.project(id);
+      setProject(project);
+    };
+    fetchProject();
+  }, [id]);
+
+  React.useEffect(() => {
+    const fetchTasks = async () => {
+      if (project) {
+        const tasks = await api.projectTasks(project.id);
+        setTasks(tasks);
+      }
+    };
+    fetchTasks();
+  }, [project]);
+
+  if (!project) return <div>Loading...</div>;
+
   return (
-    <div className="project-detail">
-      <h1>Detalle del Proyecto {id}</h1>
-      <p>Esta es la página de detalles del proyecto.</p>
-      <button onClick={onBack}>Volver</button>
+    <div>
+      <h1>{project.name}</h1>
+      <p>{project.description}</p>
+      <h2>Tasks</h2>
+      <ul>
+        {tasks.map((task) => (
+          <li key={task.id}>{task.title}</li>
+        ))}
+      </ul>
+      <button onClick={onBack}>Back</button>
     </div>
   );
 };
