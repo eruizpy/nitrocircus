@@ -19,7 +19,7 @@ jobs:
           script: |
             set -e
             cd /opt/nitrocircus
-            set -a; source .env 2>/dev/null || true; set +a
+            set -a; . ./.env 2>/dev/null || true; set +a
 
             # Write script to file to avoid bash escaping issues with $ in GraphQL
             cat > /tmp/sync-board.mjs << 'SCRIPT'

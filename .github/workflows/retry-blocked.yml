@@ -19,7 +19,7 @@ jobs:
           script: |
             set -e
             cd /opt/nitrocircus
-            set -a; source .env 2>/dev/null || true; set +a
+            set -a; . ./.env 2>/dev/null || true; set +a
 
             node -e "
             const { MongoClient, ObjectId } = require('mongodb');

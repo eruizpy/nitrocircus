@@ -59,6 +59,9 @@ Resumen del cambio local:
 - Se mejoro la trazabilidad del callback `task.agent_complete` para registrar `provider`, `code`, `message` y `summary` en `event_logs`.
 - Se corrigio el workflow de deploy para hacer `source .env` antes de `pm2 restart nitrocircus-agents --update-env`, de modo que el runner host reciba variables nuevas como `OPENAI_*`.
 - Se valido operativamente que Groq puede actuar como endpoint OpenAI-compatible: una llamada real a `https://api.groq.com/openai/v1/chat/completions` con `GROQ_API_KEY` devolvio `STATUS=200` y JSON valido.
+- Se detecto luego una contradiccion operativa: en los workflows remotos, `source .env` no era portable y el runner seguia sin recibir `OPENAI_*` aunque el deploy terminara `success`.
+- Se corrigieron los workflows `deploy`, `retry-blocked`, `sync-github-board` y `db-reset` para usar sintaxis POSIX (`. ./.env`) en lugar de `source .env`.
+- En produccion se aplico el restart manual correcto del runner con `. /opt/nitrocircus/.env`, y se verifico en PM2 que `nitrocircus-agents` ya tiene `AGENT_PRIMARY_PROVIDER=claude`, `AGENT_FALLBACK_PROVIDER=openai`, `OPENAI_BASE_URL=https://api.groq.com/openai/v1`, `OPENAI_MODEL=llama-3.3-70b-versatile` y `hasOpenAIKey=true`.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -72,6 +75,7 @@ Resumen del cambio local:
 - El nuevo proyecto de prueba `cosito1` existe, esta planificado y sus tareas/issues ya fueron creados.
 - Las tareas de `cosito1` quedaron `blocked` por cuota agotada de Claude Code, no por fallo de orquestacion.
 - El repo ahora incluye soporte para fallback del runner, pero hasta desplegarlo y cargar `OPENAI_*` en produccion ese fallback aun no esta activo.
+- Produccion ya quedo con fallback activable en caliente y el runner host ya tiene las variables cargadas; falta reencolar tareas y validar comportamiento real del fallback.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -86,12 +90,13 @@ Resumen del cambio local:
 10. Verificar que los issues `#109` a `#113` figuren `CLOSED`.
 11. Validacion historica: tras el reset previo, Mongo llego a quedar en `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
 12. Ejecutar `npx tsc --noEmit -p workers/agent-runner/tsconfig.json` y `npx tsc --noEmit -p apps/api/tsconfig.json`.
-13. Tras desplegar este cambio, confirmar que `pm2 env nitrocircus-agents` refleje `OPENAI_*` o que los logs del runner muestren fallback explicito cuando Claude quede sin cuota.
+13. Tras desplegar este cambio, confirmar que `pm2` para `nitrocircus-agents` refleje `OPENAI_*` o que los logs del runner muestren fallback explicito cuando Claude quede sin cuota.
 14. Para activacion inmediata sin credencial OpenAI nativa, configurar en `/opt/nitrocircus/.env`:
     - `OPENAI_API_KEY=<valor de GROQ_API_KEY>`
     - `OPENAI_BASE_URL=https://api.groq.com/openai/v1`
     - `OPENAI_MODEL=llama-3.3-70b-versatile`
 15. Ejecutar el workflow `Retry Blocked Tasks` y verificar que las tareas de `cosito1` se reencolen con el runner actualizado.
+16. Si se necesita validacion inmediata antes del siguiente deploy, reiniciar manualmente el runner con `. /opt/nitrocircus/.env` y `pm2 restart nitrocircus-agents --update-env`.
 
 ## Siguiente paso recomendado
 Desplegar el soporte de fallback, cargar `OPENAI_*` en produccion y ejecutar `Retry Blocked Tasks` para reintentar las tareas de `cosito1` con fallback automatico cuando Claude vuelva a quedar sin cuota.
