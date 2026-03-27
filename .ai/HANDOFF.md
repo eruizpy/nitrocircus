@@ -132,6 +132,27 @@ Resumen del cambio local:
   - `source/main/` exportado dentro del bundle
   - `task-branches/` exportado para 8 branches de tarea
   - un solo warning residual: la branch `feat/cosito1/crear-un-dockerfile` no existe en GitHub y el bundle la reporta como `failed` con `404`
+- Luego se investigo y reparo ese warning residual de `#116`:
+  - se reconstruyo la branch `feat/cosito1/crear-un-dockerfile`
+  - se publico con el commit `7d7ebc8`
+  - se regenero `cosito1`
+  - `DELIVERY.json` quedo sin warnings y el bundle ya exporta tambien `task-branches/feat__cosito1__crear-un-dockerfile`
+- Durante una nueva prueba E2E con `cosito2` aparecio un incidente critico de entorno:
+  - el host productivo `/opt/nitrocircus` habia quedado en una branch de agente (`feat/cosito2/investigacion-y-seleccion-de-imagenes`) aunque el commit ya era de `main`
+  - el runner seguia usando el mismo checkout productivo como `REPO_PATH`
+  - una branch de agente agrego configuracion obligatoria de WhatsApp (`WHATSAPP_API_URL`, etc.) y la API empezo a reiniciarse por faltar esas variables
+  - esto explico la divergencia observada entre runner/logs y estados persistidos durante `cosito2`
+- Se corrigio estructuralmente en `bb87b92` (`ops: isolate runner repo from production checkout`):
+  - el workflow de deploy prepara `/opt/nitrocircus-runner` como checkout aislado para agentes
+  - PM2 del runner ahora usa `REPO_PATH=/opt/nitrocircus-runner`
+  - se documento la regla de integraciones externas opcionales/mock en `.env.example`
+  - se registro la decision en `ADR-014`
+- Validacion real post-fix:
+  - deploy `23659959278` `success`
+  - `/opt/nitrocircus` quedo nuevamente en `main` sobre `bb87b92`
+  - `/opt/nitrocircus-runner` quedo en `main` sobre `bb87b92`
+  - `pm2` muestra `nitrocircus-agents` online y con `REPO_PATH=/opt/nitrocircus-runner`
+  - `curl http://172.233.163.22:3000/health` responde sano otra vez
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -161,6 +182,10 @@ Resumen del cambio local:
 - El flujo de entrega ahora deja un paquete persistido y extraible en `projects/<slug>/`, no solo metadata.
 - El bundle validado en produccion incluye codigo fuente base, documentacion operativa y export de branches de tarea cuando existen en GitHub.
 - El unico residual conocido del bundle validado es una branch historica faltante en GitHub para `cosito1` (`feat/cosito1/crear-un-dockerfile`), correctamente reflejada como warning en `DELIVERY.json`.
+- Ese residual de `cosito1` ya quedo resuelto; el bundle ahora exporta tambien la branch reconstruida de `#116`.
+- Produccion ya no comparte checkout entre app y runner. El arbol de la app y el workspace del runner quedaron separados.
+- La regla operativa vigente es que futuras integraciones externas no deben volver obligatorio el arranque del sistema base; deben ser configurables y mockeables.
+- `cosito2` quedo creado, planificado e iniciado. Sus tareas existen con agente asignado e issues `#123` a `#126`, pero la prueba E2E debe retomarse desde este punto ya con el entorno saneado.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -195,6 +220,10 @@ Resumen del cambio local:
 27. Confirmar en produccion que `projects/cosito1/cosito1.zip` existe y pesa mas que un bundle solo documental.
 28. Confirmar en `projects/cosito1/DELIVERY.json` que `artifactCount` incluya snapshot base + branches de tarea y que cualquier faltante quede como warning explicito.
 29. Confirmar en `projects/cosito1/task-branches/` que existan exportes de frontend/devops para las branches historicas presentes en GitHub.
+30. Confirmar que `projects/cosito1/DELIVERY.json` ya no reporte warning para `feat/cosito1/crear-un-dockerfile`.
+31. Confirmar en produccion que `pm2` del runner usa `REPO_PATH=/opt/nitrocircus-runner`.
+32. Confirmar que `/opt/nitrocircus` y `/opt/nitrocircus-runner` esten ambos en commit `bb87b92` o posterior.
+33. Retomar `cosito2` y verificar si las tareas `#123` a `#126` pasan de `in_progress` a `in_review` ya con el entorno saneado.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -207,6 +236,7 @@ Los siguientes pasos exactos recomendados son:
 - siguiente foco operativo recomendado: crear un nuevo proyecto de prueba y recorrer `/new` -> `/plan` -> `/start` -> `/deliver` para validar el flujo completo sobre datos nacidos ya con esta version
 - siguiente foco tecnico recomendado: revisar la causa de corrupcion BuildKit del run `23656112853` para evitar que un deploy fallido vuelva a requerir recuperacion manual
 - siguiente foco operativo recomendado: investigar por que la branch `feat/cosito1/crear-un-dockerfile` no existe en GitHub aunque la tarea `#116` figure completada, para eliminar el warning residual del bundle historico
+- siguiente foco operativo recomendado: continuar la validacion de `cosito2` desde su estado actual `active`, observando si los callbacks del runner vuelven a persistir `in_review`/`done` correctamente tras aislar el checkout
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
