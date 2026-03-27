@@ -78,11 +78,21 @@ jobs:
             const tasks = await db.collection('tasks').find({ githubIssueNumber: { $exists: true, $ne: null } }).toArray();
             console.log(`Found ${tasks.length} tasks with GitHub issues`);
 
-            const cfg = await loadProjectCfg();
+            // Project board (needs 'project' OAuth scope — optional)
+            let cfg = null;
+            try {
+              cfg = await loadProjectCfg();
+              console.log('Project board config loaded ✓');
+            } catch(e) {
+              console.warn('Project board unavailable (token may need "project" scope):', e.message);
+              console.warn('Will sync issue labels only.');
+            }
+
             let synced = 0;
 
             for (const task of tasks) {
               try {
+                // Always sync issue labels (REST API — works with repo scope)
                 const issue = await ghRest(`/issues/${task.githubIssueNumber}`, 'GET');
                 const labels = issue.labels.map(l => l.name).filter(n => !n.startsWith('status:'));
                 const statusLabel = STATE_TO_LABEL[task.state];
@@ -92,7 +102,8 @@ jobs:
                   state: (task.state === 'done' || task.state === 'delivered') ? 'closed' : 'open',
                 });
 
-                if (task.githubProjectItemId) {
+                // Move card on project board if token has project scope
+                if (cfg && task.githubProjectItemId) {
                   const kw = STATE_TO_KW[task.state];
                   const opt = cfg.options.find(o => o.name.toLowerCase().includes(kw));
                   if (opt) {
