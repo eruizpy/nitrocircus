@@ -68,11 +68,25 @@ jobs:
             echo "==> Rebuilding Docker services..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
+            echo "==> Preparing isolated runner checkout..."
+            RUNNER_REPO=/opt/nitrocircus-runner
+            ORIGIN_URL=$(git remote get-url origin)
+            if [ ! -d "$RUNNER_REPO/.git" ]; then
+              git clone "$ORIGIN_URL" "$RUNNER_REPO"
+            fi
+            cd "$RUNNER_REPO"
+            git remote set-url origin "$ORIGIN_URL"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            npm install
+            cd /opt/nitrocircus
+
             echo "==> Restarting agent-runner..."
             set -a; . ./.env 2>/dev/null || true; set +a
-            export REPO_PATH=/opt/nitrocircus
-            pm2 restart nitrocircus-agents --update-env 2>/dev/null || \
-              pm2 start "npm run agents" --name nitrocircus-agents
+            export REPO_PATH=/opt/nitrocircus-runner
+            pm2 delete nitrocircus-agents 2>/dev/null || true
+            pm2 start "cd /opt/nitrocircus-runner && npm run start --workspace=workers/agent-runner" --name nitrocircus-agents
 
             echo "==> Starting Miniverse backend (port 4322)..."
             if pm2 describe miniverse > /dev/null 2>&1; then
