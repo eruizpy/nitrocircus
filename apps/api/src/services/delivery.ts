@@ -6,7 +6,7 @@ import type { Project, Epic, Task, AgentType } from '@nitrocircus/shared'
 import { listEpicsByProject } from './epic'
 import { listTasksByProject } from './task'
 import { logEvent } from './event-log'
-import { downloadRepoArchive } from './github'
+import { downloadRepoArchive, taskBranchName } from './github'
 
 const execFileAsync = promisify(execFile)
 
@@ -58,6 +58,10 @@ const STATE_EMOJI: Record<string, string> = {
 
 function outputPathForReadme(deliveryDir: string, targetPath: string): string {
   return path.relative(deliveryDir, targetPath).replaceAll(path.sep, '/')
+}
+
+function resolveTaskBranch(task: Task, projectName: string): string {
+  return task.githubBranch ?? taskBranchName(projectName, task.title)
 }
 
 function buildReadme(project: Project, epics: Epic[], tasks: Task[], bundle: DeliveryBundle): string {
@@ -115,7 +119,7 @@ function buildReadme(project: Project, epics: Epic[], tasks: Task[], bundle: Del
   return lines.join('\n')
 }
 
-function buildTasksDoc(epics: Epic[], tasks: Task[]): string {
+function buildTasksDoc(project: Project, epics: Epic[], tasks: Task[]): string {
   const lines = [
     '# Tareas del proyecto',
     '',
@@ -134,9 +138,7 @@ function buildTasksDoc(epics: Epic[], tasks: Task[]): string {
       if (task.githubIssueNumber) {
         lines.push(`**Issue:** #${task.githubIssueNumber}`)
       }
-      if (task.githubBranch) {
-        lines.push(`**Branch:** \`${task.githubBranch}\``)
-      }
+      lines.push(`**Branch:** \`${resolveTaskBranch(task, project.name)}\``)
       lines.push('')
       lines.push(task.description)
       if (task.acceptanceCriteria?.length) {
@@ -222,7 +224,7 @@ function buildRunbook(project: Project, bundle: DeliveryBundle): string {
   return lines.join('\n')
 }
 
-function buildArtifactsDoc(tasks: Task[], bundle: DeliveryBundle): string {
+function buildArtifactsDoc(project: Project, tasks: Task[], bundle: DeliveryBundle): string {
   const lines = [
     '# Artefactos exportados',
     '',
@@ -245,7 +247,7 @@ function buildArtifactsDoc(tasks: Task[], bundle: DeliveryBundle): string {
   lines.push('## Tareas incluidas')
   lines.push('')
   for (const task of tasks) {
-    lines.push(`- ${task.title} | estado=${task.state} | agente=${task.assignedAgent ?? 'sin asignar'}${task.githubBranch ? ` | branch=${task.githubBranch}` : ''}`)
+    lines.push(`- ${task.title} | estado=${task.state} | agente=${task.assignedAgent ?? 'sin asignar'} | branch=${resolveTaskBranch(task, project.name)}`)
   }
   lines.push('')
 
@@ -323,15 +325,16 @@ async function buildBundle(project: Project, tasks: Task[], dir: string): Promis
 
   const seenBranches = new Set<string>()
   for (const task of tasks) {
-    if (!task.githubBranch || seenBranches.has(task.githubBranch)) continue
-    seenBranches.add(task.githubBranch)
+    const branchRef = resolveTaskBranch(task, project.name)
+    if (seenBranches.has(branchRef)) continue
+    seenBranches.add(branchRef)
 
-    const outputDir = path.join(branchesRoot, safeSegment(task.githubBranch))
+    const outputDir = path.join(branchesRoot, safeSegment(branchRef))
     try {
-      await downloadAndExtract(task.githubBranch, outputDir, tmpDir)
+      await downloadAndExtract(branchRef, outputDir, tmpDir)
       artifacts.push({
         kind: 'task-branch',
-        ref: task.githubBranch,
+        ref: branchRef,
         title: task.title,
         agent: task.assignedAgent,
         issueNumber: task.githubIssueNumber,
@@ -340,10 +343,10 @@ async function buildBundle(project: Project, tasks: Task[], dir: string): Promis
       })
     } catch (error) {
       const warning = error instanceof Error ? error.message : String(error)
-      warnings.push(`No se pudo exportar la branch ${task.githubBranch}: ${warning}`)
+      warnings.push(`No se pudo exportar la branch ${branchRef}: ${warning}`)
       artifacts.push({
         kind: 'task-branch',
-        ref: task.githubBranch,
+        ref: branchRef,
         title: task.title,
         agent: task.assignedAgent,
         issueNumber: task.githubIssueNumber,
@@ -372,10 +375,10 @@ export async function deliverProject(project: Project): Promise<string> {
 
   await Promise.all([
     fs.writeFile(path.join(dir, 'README.md'), buildReadme(project, epics, tasks, bundle)),
-    fs.writeFile(path.join(dir, 'TASKS.md'), buildTasksDoc(epics, tasks)),
+    fs.writeFile(path.join(dir, 'TASKS.md'), buildTasksDoc(project, epics, tasks)),
     fs.writeFile(path.join(dir, '.env.example'), buildEnvExample(project, bundle)),
     fs.writeFile(path.join(dir, 'RUNBOOK.md'), buildRunbook(project, bundle)),
-    fs.writeFile(path.join(dir, 'ARTIFACTS.md'), buildArtifactsDoc(tasks, bundle)),
+    fs.writeFile(path.join(dir, 'ARTIFACTS.md'), buildArtifactsDoc(project, tasks, bundle)),
     fs.writeFile(
       path.join(dir, 'DELIVERY.json'),
       JSON.stringify(
@@ -395,7 +398,7 @@ export async function deliverProject(project: Project): Promise<string> {
             title: task.title,
             state: task.state,
             agent: task.assignedAgent,
-            branch: task.githubBranch,
+            branch: resolveTaskBranch(task, project.name),
             issue: task.githubIssueNumber,
           })),
         },
