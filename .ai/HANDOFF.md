@@ -45,6 +45,10 @@ Resumen del cambio local:
 - Se detecto y corrigio en produccion una configuracion defectuosa en `/opt/nitrocircus/.env`: `GITHUB_REPO` tenia un comentario inline en el valor y faltaba `GITHUB_PROJECT_NUMBER=1`.
 - Se actualizo en produccion `GITHUB_TOKEN` al token con scope `project` y se verifico por huella que ya coincide con el token activo de `gh auth token`.
 - Se ejecuto nuevamente `Sync GitHub Board` y el run `23651041892` cargo la configuracion del board (`Project board config loaded ✓`) y sincronizo `5/5` tareas sin fallback ni warnings.
+- Se limpio el proyecto operativo actual para reiniciar desde cero.
+- Los issues activos del proyecto `pruebas1` (`#109` a `#113`) se cerraron con comentario de reinicio operativo.
+- Se ejecuto el workflow `Reset Database` (run `23651737728`) y termino `success`.
+- Se verifico en produccion que Mongo quedo vacio: `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -53,6 +57,8 @@ Resumen del cambio local:
 - Produccion quedo desplegada y saludable con el commit `0d03d1b`.
 - El flujo pendiente de `sync-github-board` ya quedo validado contra el token real actual de produccion.
 - GitHub Projects v2 ya quedo funcionando de forma automatica en produccion para labels, estado de issues y movimiento de cards del board.
+- El sistema operativo quedo reiniciado desde cero: sin proyectos ni tareas activas en la base de datos.
+- Los ultimos issues del proyecto activo quedaron cerrados para evitar arrastrar trabajo viejo al nuevo arranque.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -63,9 +69,12 @@ Resumen del cambio local:
 6. Confirmar en GitHub que issues como `#110` y `#111` conserven labels de estado coherentes (`status:in_progress`, `status:in_review`).
 7. Revisar en GitHub Actions que el run `23651041892` de `Sync GitHub Board` figure como `success`.
 8. Confirmar en los logs del run `23651041892` que aparezcan `Project board config loaded ✓` y `Done: 5/5 synced`, sin warnings de fallback.
+9. Revisar en GitHub Actions que el run `23651737728` de `Reset Database` figure como `success`.
+10. Verificar que los issues `#109` a `#113` figuren `CLOSED`.
+11. Verificar en produccion que Mongo tenga `projects:0`, `tasks:0`, `epics:0`, `agent_runs:0`, `event_logs:0`.
 
 ## Siguiente paso recomendado
-Verificar visualmente en GitHub Projects que las cards de las tareas sincronizadas reflejen el estado esperado del campo `Status` despues del run `23651041892`.
+Crear el nuevo proyecto desde la interfaz habitual del Product Owner para arrancar un flujo limpio, sin reutilizar tareas anteriores.
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
