@@ -27,12 +27,28 @@ else
 fi
 
 echo "==> Configuring nginx..."
-if [ -f "$APP_DIR/infra/nginx/cosito5.conf" ]; then
+# Check if SSL certificate exists, use HTTPS config, otherwise HTTP
+if [ -d "/etc/letsencrypt/live" ] && [ -n "$(ls -A /etc/letsencrypt/live 2>/dev/null)" ]; then
+  DOMAIN=$(ls /etc/letsencrypt/live | grep -v README | head -1)
+  if [ -f "$APP_DIR/infra/nginx/cosito5-ssl.conf" ]; then
+    echo "==> SSL certificate found for $DOMAIN, using HTTPS config"
+    cp "$APP_DIR/infra/nginx/cosito5-ssl.conf" /etc/nginx/sites-available/cosito5
+    sed -i "s/DOMAIN/$DOMAIN/g" /etc/nginx/sites-available/cosito5
+    sed -i "s/server_name _;/server_name $DOMAIN;/" /etc/nginx/sites-available/cosito5
+    ln -sf /etc/nginx/sites-available/cosito5 /etc/nginx/sites-enabled/cosito5
+    rm -f /etc/nginx/sites-enabled/default
+    nginx -t && systemctl reload nginx
+    echo "✓ nginx configured with HTTPS"
+  else
+    echo "⚠️  SSL config not found, falling back to HTTP"
+  fi
+elif [ -f "$APP_DIR/infra/nginx/cosito5.conf" ]; then
+  echo "==> No SSL certificate found, using HTTP config"
   cp "$APP_DIR/infra/nginx/cosito5.conf" /etc/nginx/sites-available/cosito5
   ln -sf /etc/nginx/sites-available/cosito5 /etc/nginx/sites-enabled/cosito5
   rm -f /etc/nginx/sites-enabled/default
   nginx -t && systemctl reload nginx
-  echo "✓ nginx configured and reloaded"
+  echo "✓ nginx configured with HTTP (run deploy/ssl-setup.sh <domain> to enable HTTPS)"
 else
   echo "⚠️  nginx config not found, skipping nginx configuration"
 fi
