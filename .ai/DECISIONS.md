@@ -55,3 +55,8 @@
 - Decision: `planProject` normaliza `assignedAgent` en runtime. Si el LLM lo omite o devuelve un valor invalido, NitroCircus infiere `frontend`, `backend` o `devops` por heuristica y nunca persiste una tarea sin agente de ejecucion.
 - Motivo: el flujo futuro no debe depender de que el LLM cumpla perfectamente el contrato JSON para que `/start` pueda despachar trabajo.
 - Alcance: afecta la persistencia de tareas y la creacion de issues GitHub para todos los proyectos nuevos.
+
+## ADR-013 - La entrega exporta un bundle persistido con ZIP, snapshot base y branches de tarea
+- Decision: `/deliver` debe escribir en `projects/<slug>/` un paquete persistido con `<slug>.zip`, documentacion operativa y export de codigo. El bundle usa `main` como snapshot base del repo y agrega exports por branch de tarea; si `githubBranch` no esta persistido, se deriva con la convencion canonica `feat/<project>/<task>`.
+- Motivo: la implementacion anterior solo dejaba metadata textual y no cumplia la politica de entrega de codigo listo para extraccion, ejecucion o despliegue posterior. En produccion ademas `projects/` no estaba persistido, por lo que el resultado podia perderse entre recreaciones del contenedor.
+- Alcance: el API ahora descarga artefactos desde GitHub, genera `RUNBOOK.md` y `ARTIFACTS.md`, crea el `.zip` final y requiere que `docker-compose.prod.yml` monte `./projects:/app/projects` para persistencia real.

@@ -114,6 +114,24 @@ Resumen del cambio local:
   - los issues `#114` a `#122` quedaron `CLOSED` con label `status:done`
   - los items del GitHub Project `NitroCircus` quedaron con `Status=Done`
 - Se valido ademas que no existe ninguna tarea persistida sin `assignedAgent` en la base de produccion (`missingAssignedAgentCount: 0`).
+- Se detecto luego una contradiccion nueva en el flujo de entrega: `/deliver` solo dejaba metadata (`README.md`, `TASKS.md`, `.env.example`, `DELIVERY.json`) y no generaba un paquete ejecutable con codigo fuente.
+- Tambien se encontro un riesgo de persistencia en produccion: `docker-compose.prod.yml` anulaba el volumen de `projects/`, por lo que la carpeta de entrega podia perderse al recrear el contenedor del API.
+- Se implemento el nuevo bundle de entrega en `85fc740` (`feat(delivery): bundle zip artifacts on deliver`):
+  - descarga snapshot base de `main` desde GitHub
+  - exporta branches de tarea dentro de `task-branches/`
+  - genera `RUNBOOK.md` y `ARTIFACTS.md`
+  - crea `<slug>.zip` dentro de `projects/<slug>/`
+  - persiste `projects/` en produccion con `./projects:/app/projects`
+- La primera validacion productiva del bundle mostro solo el snapshot base. La causa real fue que `cosito1` no tenia `githubBranch` persistido en Mongo.
+- Se corrigio eso en `35fd7f9` (`fix(delivery): derive task branches for bundle export`) derivando la branch canonica por tarea cuando falta `githubBranch`.
+- Validacion final real en produccion sobre `cosito1`:
+  - deploy `23658419454` `success`
+  - deploy `23658598792` `success`
+  - `projects/cosito1/cosito1.zip` generado correctamente
+  - `projects/cosito1/README.md`, `TASKS.md`, `RUNBOOK.md`, `ARTIFACTS.md`, `.env.example` y `DELIVERY.json` presentes
+  - `source/main/` exportado dentro del bundle
+  - `task-branches/` exportado para 8 branches de tarea
+  - un solo warning residual: la branch `feat/cosito1/crear-un-dockerfile` no existe en GitHub y el bundle la reporta como `failed` con `404`
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -140,6 +158,9 @@ Resumen del cambio local:
 - El nuevo flujo de entrega ya quedo validado en produccion: proyecto entregado implica tareas `done`, y `/deploy` sigue siendo opcional y posterior.
 - La base de produccion no tiene tareas sin `assignedAgent`; el endurecimiento de planificacion ya esta alineado con el estado persistido.
 - El repo local sigue limpio en `main...origin/main`.
+- El flujo de entrega ahora deja un paquete persistido y extraible en `projects/<slug>/`, no solo metadata.
+- El bundle validado en produccion incluye codigo fuente base, documentacion operativa y export de branches de tarea cuando existen en GitHub.
+- El unico residual conocido del bundle validado es una branch historica faltante en GitHub para `cosito1` (`feat/cosito1/crear-un-dockerfile`), correctamente reflejada como warning en `DELIVERY.json`.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -171,6 +192,9 @@ Resumen del cambio local:
 24. Confirmar en GitHub que `#114` a `#122` figuran `CLOSED` con `status:done`.
 25. Confirmar en GitHub Projects que los items `#114` a `#122` estan en `Done`.
 26. Confirmar en produccion que `missingAssignedAgentCount` sigue siendo `0`.
+27. Confirmar en produccion que `projects/cosito1/cosito1.zip` existe y pesa mas que un bundle solo documental.
+28. Confirmar en `projects/cosito1/DELIVERY.json` que `artifactCount` incluya snapshot base + branches de tarea y que cualquier faltante quede como warning explicito.
+29. Confirmar en `projects/cosito1/task-branches/` que existan exportes de frontend/devops para las branches historicas presentes en GitHub.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
@@ -182,6 +206,7 @@ Los siguientes pasos exactos recomendados son:
 - siguiente foco operativo recomendado: revisar PRs/ramas generadas y preparar la etapa de aprobacion/revision de las tareas en `in_review`
 - siguiente foco operativo recomendado: crear un nuevo proyecto de prueba y recorrer `/new` -> `/plan` -> `/start` -> `/deliver` para validar el flujo completo sobre datos nacidos ya con esta version
 - siguiente foco tecnico recomendado: revisar la causa de corrupcion BuildKit del run `23656112853` para evitar que un deploy fallido vuelva a requerir recuperacion manual
+- siguiente foco operativo recomendado: investigar por que la branch `feat/cosito1/crear-un-dockerfile` no existe en GitHub aunque la tarea `#116` figure completada, para eliminar el warning residual del bundle historico
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
