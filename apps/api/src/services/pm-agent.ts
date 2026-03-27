@@ -148,8 +148,8 @@ export async function planProject(project: Project, actorId: string): Promise<Pl
       await transitionTask(task.id, 'assigned', 'pm')
       await transitionTask(task.id, 'awaiting_start_approval', 'pm')
 
-      // Sync to GitHub (fire-and-forget — don't fail if GitHub is not configured)
-      createTaskIssue({
+      // Sync to GitHub — await so githubIssueNumber is saved before /start can be called
+      await createTaskIssue({
         taskId: task.id,
         title: taskData.title,
         description: taskData.description,
