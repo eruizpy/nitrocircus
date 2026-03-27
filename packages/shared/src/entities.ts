@@ -125,3 +125,67 @@ export interface Product {
   createdAt: Date
   updatedAt: Date
 }
+
+// ──────────────────────────────────────────────
+// Payment
+// ──────────────────────────────────────────────
+
+export type PaymentMethod = 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer'
+export type PaymentStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'refunded'
+
+export interface Payment {
+  id: string
+  orderId: string
+  amount: number
+  currency: string
+  method: PaymentMethod
+  status: PaymentStatus
+  /** External payment provider transaction ID */
+  externalTransactionId?: string
+  /** Payment provider (e.g., 'stripe', 'paypal') */
+  provider: string
+  /** Customer information */
+  customerEmail?: string
+  /** Billing address */
+  billingAddress?: {
+    name: string
+    line1: string
+    line2?: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  /** Payment metadata from provider */
+  metadata?: Record<string, unknown>
+  /** Error message if payment failed */
+  errorMessage?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Order {
+  id: string
+  customerId?: string
+  customerEmail: string
+  products: Array<{
+    productId: string
+    quantity: number
+    price: number
+  }>
+  totalAmount: number
+  currency: string
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  paymentId?: string
+  shippingAddress?: {
+    name: string
+    line1: string
+    line2?: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  createdAt: Date
+  updatedAt: Date
+}
