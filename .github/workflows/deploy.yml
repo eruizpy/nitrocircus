@@ -85,6 +85,7 @@ jobs:
             echo "==> Restarting agent-runner..."
             set -a; . ./.env 2>/dev/null || true; set +a
             export REPO_PATH=/opt/nitrocircus-runner
+            export ORCHESTRATOR_URL=http://127.0.0.1:3000
             pm2 delete nitrocircus-agents 2>/dev/null || true
             pm2 start "cd /opt/nitrocircus-runner && npm run start --workspace=workers/agent-runner" --name nitrocircus-agents
 

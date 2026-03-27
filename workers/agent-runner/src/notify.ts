@@ -1,5 +1,7 @@
-const API_URL = process.env.ORCHESTRATOR_URL ?? 'http://localhost:3000'
+const API_URL = process.env.ORCHESTRATOR_URL ?? 'http://127.0.0.1:3000'
 const MINIVERSE_URL = process.env.MINIVERSE_URL ?? null
+const MAX_NOTIFY_ATTEMPTS = 3
+const RETRY_DELAY_MS = 1_500
 
 export async function notifyTaskState(
   taskId: string,
@@ -11,23 +13,42 @@ export async function notifyTaskState(
     message?: string
   },
 ): Promise<void> {
-  try {
-    const res = await fetch(`${API_URL}/commands`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'task.agent_complete',
-        payload: { taskId, state, details },
-        actorId: 'agent-runner',
-      }),
-      signal: AbortSignal.timeout(10_000),
-    })
-    if (!res.ok) {
-      console.error(`[notify] API responded ${res.status} for task ${taskId}`)
+  const body = JSON.stringify({
+    type: 'task.agent_complete',
+    payload: { taskId, state, details },
+    actorId: 'agent-runner',
+  })
+
+  for (let attempt = 1; attempt <= MAX_NOTIFY_ATTEMPTS; attempt += 1) {
+    try {
+      const res = await fetch(`${API_URL}/commands`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: AbortSignal.timeout(10_000),
+      })
+      const text = await res.text()
+      if (res.ok) {
+        console.log(`[notify] Task ${taskId} -> ${state} persisted on attempt ${attempt}`)
+        return
+      }
+
+      console.error(
+        `[notify] API responded ${res.status} for task ${taskId} on attempt ${attempt}: ${text.slice(0, 400)}`,
+      )
+    } catch (err) {
+      console.error(
+        `[notify] Failed to notify state for ${taskId} on attempt ${attempt}:`,
+        err instanceof Error ? err.message : err,
+      )
     }
-  } catch (err) {
-    console.error(`[notify] Failed to notify state for ${taskId}:`, err instanceof Error ? err.message : err)
+
+    if (attempt < MAX_NOTIFY_ATTEMPTS) {
+      await delay(RETRY_DELAY_MS * attempt)
+    }
   }
+
+  throw new Error(`Unable to persist task ${taskId} -> ${state} after ${MAX_NOTIFY_ATTEMPTS} attempts`)
 }
 
 type MiniverseEvent = 'agent.online' | 'agent.thinking' | 'agent.coding' | 'agent.reviewing' | 'agent.blocked' | 'agent.ready'
@@ -69,4 +90,8 @@ export function emitMiniverse(
     }),
     signal: AbortSignal.timeout(5_000),
   }).catch(() => {}) // non-critical
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
