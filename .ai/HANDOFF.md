@@ -73,6 +73,12 @@ Resumen del cambio local:
   - varias tareas cayeron en `openai:quota_exceeded` por TPM del endpoint Groq-compatible
   - una tarea cayo en `openai:patch_apply_failed` por diff invalido
   - al menos un commit del fallback no pudo completarse por falta de `git user.name/user.email` global en el host (`Author identity unknown`)
+- Despues se verifico que el host ya tenia identidad global de git (`Esteban RD <eruizpy@gmail.com>`) y se ejecuto un nuevo retry `23654583284`.
+- Con ese nuevo retry desaparecio el bloqueo de identidad git y el runner ya consiguio empujar al menos una rama real desde el fallback: `feat/cosito1/crear-una-imagen-docker`.
+- El estado operativo mejoro de forma observable:
+  - `Crear un Dockerfile` ya estaba llegando a `in_review`
+  - `Crear una imagen Docker` llego a `in_review` y se hizo push de rama
+  - siguen pendientes tareas frontend/devops afectadas por `openai:quota_exceeded` del endpoint Groq-compatible
 
 ## Estado despues de esta sesion
 - La continuidad minima entre sesiones ya queda documentada en `.ai/`.
@@ -90,6 +96,8 @@ Resumen del cambio local:
 - Queda pendiente desplegar el ajuste final que interpreta `provider_exit` de Claude como candidato a fallback y volver a reencolar las tareas para validacion definitiva.
 - La ruta de fallback ya esta validada funcionalmente en produccion: el runner deja de morir solo en `claude` y efectivamente intenta el proveedor secundario.
 - Los nuevos cuellos de botella ya no son “sin fallback”, sino capacidad/configuracion del proveedor secundario y del host git.
+- El cuello de botella de identidad git del host ya no bloquea el flujo.
+- El principal limitante actual es la cuota TPM del proveedor secundario Groq-compatible y, en segundo lugar, la calidad/validez de algunos patches generados por el fallback.
 
 ## Como validar
 1. Confirmar presencia de `.ai/PROJECT_MEMORY.md`, `.ai/HANDOFF.md` y `.ai/DECISIONS.md`.
@@ -114,12 +122,14 @@ Resumen del cambio local:
 17. Confirmar en logs del runner mensajes del tipo `claude failed ... trying openai` para validar que el fallback finalmente se activa.
 18. Confirmar que la tarea `Crear un Dockerfile` o su issue asociado haya quedado en `in_review`.
 19. Revisar en logs si persisten errores `openai:quota_exceeded`, `openai:patch_apply_failed` o `Author identity unknown`.
+20. Confirmar que la rama `feat/cosito1/crear-una-imagen-docker` exista en origin.
 
 ## Siguiente paso recomendado
 Los siguientes pasos exactos recomendados son:
 - configurar `git config --global user.name` y `git config --global user.email` en el host para que el fallback pueda commitear sin warnings
 - reducir concurrencia o contexto del fallback para no disparar `429` de Groq TPM
 - endurecer el parser/aplicador de patch del fallback para rechazar o reparar diffs invalidos antes de `git apply`
+- validar en GitHub que los issues/tareas de `cosito1` ya promovidos a `in_review` tengan labels/board consistentes
 
 Como endurecimiento adicional:
 - agregar validacion defensiva en `sync-github-board.yml` para reportar errores de API REST/GraphQL con mas contexto cuando falten `labels` o el issue no exista
