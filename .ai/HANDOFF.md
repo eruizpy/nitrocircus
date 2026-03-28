@@ -28,6 +28,12 @@ Resumen del cambio local:
 - `.claude/` no parece ser fuente de verdad del proyecto; tratarla como artefacto auxiliar salvo evidencia contraria.
 
 ## Lo hecho en esta sesion
+- Se actualizo `README.md` para reflejar el estado operativo real de NitroCircus:
+  - arquitectura actual del monorepo y runtime Docker/host
+  - flujo operativo `/new` → `/plan` → `/start` → `/deliver` → `/deploy`
+  - paso a paso de despliegue a produccion con validaciones post-deploy
+  - lineamientos de troubleshooting y credenciales
+  - referencia explicita a NightCityVerse como repositorio externo
 - Se reforzo seguridad de credenciales con baseline explicita en `docs/CREDENTIALS_SECURITY_BASELINE.md`.
 - Se agrego escaneo preventivo de secretos:
   - script `scripts/security/check-secrets.mjs`
