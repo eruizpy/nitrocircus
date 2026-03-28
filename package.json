@@ -12,7 +12,8 @@
     "dev:logs": "docker compose logs -f",
     "dev:clean": "docker compose down -v",
     "agents": "npm run dev --workspace=workers/agent-runner",
-    "web": "npm run dev --workspace=apps/web"
+    "web": "npm run dev --workspace=apps/web",
+    "security:secrets": "node scripts/security/check-secrets.mjs"
   },
   "devDependencies": {
     "@types/node": "^22",

@@ -28,6 +28,12 @@ Resumen del cambio local:
 - `.claude/` no parece ser fuente de verdad del proyecto; tratarla como artefacto auxiliar salvo evidencia contraria.
 
 ## Lo hecho en esta sesion
+- Se reforzo seguridad de credenciales con baseline explicita en `docs/CREDENTIALS_SECURITY_BASELINE.md`.
+- Se agrego escaneo preventivo de secretos:
+  - script `scripts/security/check-secrets.mjs`
+  - comando `npm run security:secrets`
+  - workflow `.github/workflows/security-secrets.yml`
+- El objetivo es bloquear commits/pushes con patrones de claves expuestas en archivos trackeados.
 - Se retiro completamente NightCityVerse del monorepo NitroCircus: se elimino el directorio `nightcityverse/` y el workflow `.github/workflows/deploy-nightcityverse.yml`.
 - NightCityVerse queda ahora como repositorio externo oficial: `https://github.com/eruizpy/nightcityverse.git`.
 - NitroCircus conserva solo el conector por HTTP/WebSocket:

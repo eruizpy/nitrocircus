@@ -100,3 +100,8 @@
 - Decision: se elimina `nightcityverse/` del monorepo y se elimina tambien el workflow `.github/workflows/deploy-nightcityverse.yml`. El proyecto visual queda mantenido en el repositorio externo `https://github.com/eruizpy/nightcityverse.git`.
 - Motivo: completar el desacople operativo y evitar doble fuente de verdad del mismo servicio entre dos repositorios.
 - Alcance: NitroCircus mantiene solamente el conector (`apps/api/src/services/nightcityverse.ts` y `workers/agent-runner/src/notify.ts`) usando `NIGHTCITYVERSE_URL` como variable principal.
+
+## ADR-022 - Escaneo preventivo de secretos en CI
+- Decision: se agrega un escaneo de secretos de bajo costo en CI mediante `.github/workflows/security-secrets.yml` y `npm run security:secrets`.
+- Motivo: reducir riesgo de filtración accidental de credenciales en archivos trackeados.
+- Alcance: el escaneo revisa patrones críticos en archivos versionados (excluyendo lockfiles, `projects/`, `node_modules/` y `.env.example`) y falla el pipeline al detectar señales de secreto.
