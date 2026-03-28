@@ -2,7 +2,7 @@
 
 Sistema de orquestación multiagente para desarrollo de software, gestionado por un **Project Manager Agent** vía **Telegram**, con ejecución separada por especialidad:
 
-- **PM Agent** — GPT-5.4 Thinking
+- **PM Agent** — GPT-5.4 Thinking/Grok Ollama
 - **Frontend Agent** — Claude Sonnet 4.6
 - **Backend Agent** — Claude Opus 4.6
 - **DevOps Agent** — Codex / gpt-5.3-codex
