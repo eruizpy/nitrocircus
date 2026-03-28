@@ -3,7 +3,6 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "nightcityverse",
     "packages/*",
     "workers/*"
   ],
@@ -13,9 +12,7 @@
     "dev:logs": "docker compose logs -f",
     "dev:clean": "docker compose down -v",
     "agents": "npm run dev --workspace=workers/agent-runner",
-    "web": "npm run dev --workspace=apps/web",
-    "nightcityverse": "npm run dev --workspace=nightcityverse",
-    "miniverse": "npm run dev --workspace=nightcityverse"
+    "web": "npm run dev --workspace=apps/web"
   },
   "devDependencies": {
     "@types/node": "^22",

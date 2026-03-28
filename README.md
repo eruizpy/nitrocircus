@@ -73,7 +73,7 @@ flowchart TD
     ORCH --> MV[NightCityVerse Adapter]
 ```
 
-NightCityVerse now lives as a standalone workspace under [`nightcityverse/`](./nightcityverse) and is deployed independently from the main NitroCircus stack.
+NightCityVerse now lives as an external repository at `https://github.com/eruizpy/nightcityverse.git` and is deployed independently from the main NitroCircus stack.
 
 ## Regla crítica
 

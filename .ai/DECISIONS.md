@@ -95,3 +95,8 @@
 - Decision: NightCityVerse deja de vivir dentro de `apps/miniverse` y pasa a un workspace standalone `nightcityverse/`. NitroCircus conserva solo el adaptador HTTP para emitir eventos visuales. El deploy principal de NitroCircus deja de construir/arrancar NightCityVerse, que ahora tiene workflow propio `deploy-nightcityverse.yml`.
 - Motivo: el acoplamiento previo hacia que cambios visuales, nginx y PM2 del mundo pixelado se mezclaran con el despliegue del orquestador. Eso dificultaba operar releases por separado y aumentaba el riesgo de romper una capa no critica durante cambios del core.
 - Alcance: `NIGHTCITYVERSE_URL` pasa a ser la variable principal de integracion, con `MINIVERSE_URL` solo como fallback de compatibilidad. La separacion es logica y operativa; el proyecto sigue temporalmente dentro del mismo monorepo hasta que se extraiga a un repo propio si se decide.
+
+## ADR-021 - NightCityVerse se retira completamente del monorepo NitroCircus
+- Decision: se elimina `nightcityverse/` del monorepo y se elimina tambien el workflow `.github/workflows/deploy-nightcityverse.yml`. El proyecto visual queda mantenido en el repositorio externo `https://github.com/eruizpy/nightcityverse.git`.
+- Motivo: completar el desacople operativo y evitar doble fuente de verdad del mismo servicio entre dos repositorios.
+- Alcance: NitroCircus mantiene solamente el conector (`apps/api/src/services/nightcityverse.ts` y `workers/agent-runner/src/notify.ts`) usando `NIGHTCITYVERSE_URL` como variable principal.

@@ -28,6 +28,12 @@ Resumen del cambio local:
 - `.claude/` no parece ser fuente de verdad del proyecto; tratarla como artefacto auxiliar salvo evidencia contraria.
 
 ## Lo hecho en esta sesion
+- Se retiro completamente NightCityVerse del monorepo NitroCircus: se elimino el directorio `nightcityverse/` y el workflow `.github/workflows/deploy-nightcityverse.yml`.
+- NightCityVerse queda ahora como repositorio externo oficial: `https://github.com/eruizpy/nightcityverse.git`.
+- NitroCircus conserva solo el conector por HTTP/WebSocket:
+  - `apps/api/src/services/nightcityverse.ts`
+  - `workers/agent-runner/src/notify.ts`
+- La variable principal de integracion es `NIGHTCITYVERSE_URL` (con `MINIVERSE_URL` como fallback legado temporal).
 - Se extrajo la capa visual a un workspace standalone `nightcityverse/`, fuera de `apps/`, para empezar el desacople real respecto de NitroCircus.
 - NitroCircus quedo con un adaptador HTTP a NightCityVerse (`apps/api/src/services/nightcityverse.ts`) y ahora prioriza `NIGHTCITYVERSE_URL`, manteniendo `MINIVERSE_URL` solo como compatibilidad temporal.
 - El `agent-runner` tambien paso a usar `NIGHTCITYVERSE_URL` como variable principal de integracion visual.

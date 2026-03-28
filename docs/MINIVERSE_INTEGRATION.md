@@ -1,6 +1,6 @@
 # NightCityVerse Integration
 
-NightCityVerse now lives as a standalone project under `nightcityverse/` and should be treated as an external visual runtime consumed by NitroCircus over HTTP/WebSocket.
+NightCityVerse now lives as a standalone external repository at `https://github.com/eruizpy/nightcityverse.git` and should be treated as an external visual runtime consumed by NitroCircus over HTTP/WebSocket.
 
 ## Objetivo
 Usar NightCityVerse como capa visual y social para observar agentes trabajando.
@@ -29,5 +29,13 @@ No debe ser:
 - `agent.awaiting_approval`
 - `project.delivered`
 
-## Recomendación
-Implementar un `nightcityverse-adapter` que traduzca eventos internos del orquestador a actualizaciones visuales.
+## Conector en NitroCircus
+NitroCircus publica eventos visuales mediante un adaptador HTTP:
+- API: `apps/api/src/services/nightcityverse.ts`
+- Runner: `workers/agent-runner/src/notify.ts`
+
+Variable principal:
+- `NIGHTCITYVERSE_URL`
+
+Compatibilidad temporal:
+- `MINIVERSE_URL` (fallback legado)
